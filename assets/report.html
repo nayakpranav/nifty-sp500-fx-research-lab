@@ -17,7 +17,7 @@
   panel.querySelectorAll('.plot-target').forEach(el => {
    if (el.dataset.rendered) {Plotly.Plots.resize(el); return;}
    const spec = JSON.parse(document.getElementById(el.dataset.spec).textContent);
-   Plotly.newPlot(el, spec.data, spec.layout, {responsive:true,displaylogo:false});
+   Plotly.newPlot(el, spec.data, spec.layout, {responsive:true,displaylogo:false,modeBarButtonsToRemove:['sendChartToCloud']});
    el.dataset.rendered = 'true';
   });
  }

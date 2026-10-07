@@ -1,5 +1,6 @@
 """Shared midnight palette and Plotly defaults; no calculation logic."""
 from pathlib import Path
+from textwrap import wrap
 from .config import NIFTY, SP, FX, SP_INR, NIFTY_USD, EURUSD, EURINR, NIFTY_EUR, SP_EUR
 
 TOKENS = dict(background="#060913", sidebar="#070C1B", panel="#0B1223", raised="#10192D",
@@ -19,12 +20,13 @@ def css():
 
 
 def plotly_layout(fig, title, ytitle="", height=560):
+    title = '<br>'.join(wrap(title, width=42, break_long_words=False))
     fig.update_layout(template="plotly_dark", paper_bgcolor=TOKENS["panel"], plot_bgcolor=TOKENS["panel"],
-        title=dict(text=title, x=0.025, xanchor="left", font=dict(size=18)),
+        title=dict(text=title, x=0.025, xanchor="left", y=.985, yanchor="top", automargin=True, font=dict(size=16)),
         font=dict(family="Inter, Segoe UI, Arial, sans-serif", size=13, color=TOKENS["text"]),
-        height=height, margin=dict(l=65, r=30, t=115, b=60), hovermode="x unified",
+        height=height, margin=dict(l=65, r=30, t=135, b=65), hovermode="x unified",
         hoverlabel=dict(bgcolor=TOKENS["raised"], font_color=TOKENS["text"], bordercolor=TOKENS["border"]),
-        legend=dict(orientation="h", y=1.14, x=0, font=dict(size=12), bgcolor=TOKENS["panel"]))
+        legend=dict(orientation="h", y=1.04, yanchor="bottom", x=0, font=dict(size=11), bgcolor=TOKENS["panel"]))
     fig.update_xaxes(showgrid=False, automargin=True, color=TOKENS["muted"])
     fig.update_yaxes(gridcolor=TOKENS["border"], zerolinecolor=TOKENS["muted"], automargin=True, color=TOKENS["muted"])
     if ytitle:
