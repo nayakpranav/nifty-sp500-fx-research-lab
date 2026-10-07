@@ -17,7 +17,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Quantitative, offline-report and Streamlit regression tests
+        run: python -m pytest -q
       - name: Compile
         run: python -m compileall -q streamlit_app.py src
       - name: Import application modules

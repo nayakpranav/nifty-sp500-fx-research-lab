@@ -2,14 +2,15 @@
 
 import numpy as np
 import pandas as pd
-from .config import NIFTY, SP, FX, SP_INR, NIFTY_USD, DAYS_PER_YEAR
+from .config import NIFTY, SP, FX, SP_INR, NIFTY_USD, EURUSD, DAYS_PER_YEAR
+from .lenses import home_currency, lens_pair, canonical_lens
 from .transforms import period_levels
 from .rolling import window_indices
 
 PAIRS = ((NIFTY, SP), (NIFTY, SP_INR), (SP, FX))
 
 
-def correlations(daily):
+def correlations(daily, perspective="Indian investor"):
     """Daily cutoffs are asynchronous; monthly estimates are primary."""
     daily_r = daily.pct_change(fill_method=None).dropna()
     monthly_r = period_levels(daily).pct_change(fill_method=None).dropna()
@@ -21,16 +22,16 @@ def correlations(daily):
         curves[n] = pd.DataFrame(
             {
                 f"{a} vs {b}": monthly_r[a].rolling(n, min_periods=n).corr(monthly_r[b])
-                for a, b in PAIRS
+                for a, b in dict.fromkeys((*PAIRS, lens_pair(perspective)))
             }
         )
     return point, curves
 
 
-def rolling_volatility(daily, years=1):
+def rolling_volatility(daily, years=1, perspective="Indian investor"):
     """Monthly volatility, full 12H observations, annualized by √12."""
     r = period_levels(daily).pct_change(fill_method=None)
-    return r[[NIFTY, SP_INR]].rolling(12 * years, min_periods=12 * years).std(
+    return r[list(lens_pair(perspective))].rolling(12 * years, min_periods=12 * years).std(
         ddof=1
     ) * np.sqrt(12)
 
@@ -64,7 +65,9 @@ def block_bootstrap(
     if any(not 0 < c < 1 for c in confidence):
         raise ValueError("Confidence levels must lie strictly between zero and one.")
     sample = period_levels(levels, frequency)
-    log = np.log(sample[[NIFTY, SP, FX]]).diff().iloc[1:].to_numpy()
+    home = home_currency(perspective)
+    columns = [NIFTY, SP, FX] + ([EURUSD] if home == "EUR" else [])
+    log = np.log(sample[columns]).diff().iloc[1:].to_numpy()
     n = len(log)
     if not 1 <= block_length <= n:
         raise ValueError("Block length must lie between 1 and sample return count.")
@@ -76,11 +79,12 @@ def block_bootstrap(
             {"warning": "Insufficient history for selected horizon."},
         )
     years = (sample.index[ends] - sample.index[starts]).days.to_numpy() / DAYS_PER_YEAR
-    primitive = (
-        np.column_stack([log[:, 0], log[:, 1] + log[:, 2]])
-        if perspective == "Indian investor"
-        else np.column_stack([log[:, 0] - log[:, 2], log[:, 1]])
-    )
+    if home == "INR":
+        primitive = np.column_stack([log[:, 0], log[:, 1] + log[:, 2]])
+    elif home == "USD":
+        primitive = np.column_stack([log[:, 0] - log[:, 2], log[:, 1]])
+    else:
+        primitive = np.column_stack([log[:, 0] - log[:, 2] - log[:, 3], log[:, 1] - log[:, 3]])
     cumulative = np.vstack([np.zeros(2), primitive.cumsum(axis=0)])
     original = np.expm1((cumulative[ends] - cumulative[starts]) / years[:, None])
     delta = original[:, 1] - original[:, 0]
@@ -148,8 +152,9 @@ def block_bootstrap(
     return pd.DataFrame(rows), pd.DataFrame(simulated, columns=names), metadata
 
 
-def fx_regimes(daily):
+def fx_regimes(daily, perspective="Indian investor"):
     """Monthly conditional outcomes describe co-movement, not causal FX effects."""
+    nifty, sp = lens_pair(perspective)
     r = period_levels(daily).pct_change(fill_method=None).dropna()
     groups = pd.Series(
         np.where(
@@ -170,7 +175,8 @@ def fx_regimes(daily):
                 FX_mean=subset[FX].mean(),
                 SP_INR_mean=subset[SP_INR].mean(),
                 NIFTY_mean=subset[NIFTY].mean(),
-                SP_win_fraction=(subset[SP_INR] > subset[NIFTY]).mean(),
+                SP_win_fraction=(subset[sp] > subset[nifty]).mean(),
+                Home_NIFTY_mean=subset[nifty].mean(), Home_SP_mean=subset[sp].mean(),
             )
         )
     return pd.DataFrame(rows)

@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from .config import NIFTY, SP, FX
+from .config import NIFTY, SP, FX, EURUSD
 
 
 class DataError(ValueError):
@@ -46,7 +46,7 @@ def validate_series(series, metadata, now=None, stale_days=14):
         ),
     ):
         issue(check, "FAIL" if bad else "PASS", detail if bad else "Valid")
-    expected_currency = "USD" if name == SP else "INR"
+    expected_currency = "USD" if name in (SP, EURUSD) else "INR"
     issue(
         "currency",
         "PASS" if metadata.get("currency") == expected_currency else "FAIL",
@@ -89,6 +89,13 @@ def validate_series(series, metadata, now=None, stale_days=14):
             "PASS" if series.between(5, 250).all() else "FAIL",
             "Sanity bound 5–250 INR/USD; a reciprocal cannot pass. Not identity proof.",
         )
+    if name == EURUSD:
+        ok = metadata.get("units") == "USD per EUR" and metadata.get("base") == "EUR"
+        ok &= metadata.get("quote") == "USD" and metadata.get("ticker") == "DEXUSEU"
+        ok &= metadata.get("direction_evidence") == "U.S. Dollars to One Euro"
+        issue("FX direction", "PASS" if ok else "FAIL", str(metadata.get("units")))
+        issue("FX magnitude", "PASS" if series.between(0.4, 2.5).all() else "FAIL",
+              "Sanity bound 0.4–2.5 USD/EUR; verified provider units establish direction.")
     if len(series) > 1:
         gaps = series.index.to_series().diff().dt.days
         issue(
@@ -102,7 +109,7 @@ def validate_series(series, metadata, now=None, stale_days=14):
             f"Maximum spacing {gaps.max():.0f} days",
         )
         extreme = series.pct_change(fill_method=None).abs() > (
-            0.08 if name == FX else 0.25
+            0.08 if name in (FX, EURUSD) else 0.25
         )
         issue(
             "extreme daily moves",

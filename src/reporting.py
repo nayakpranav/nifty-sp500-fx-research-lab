@@ -6,7 +6,8 @@ import json
 import numpy as np
 import pandas as pd
 from .config import NIFTY, SP, FX, SP_INR, NIFTY_USD, HORIZONS
-from .currency import attribution, validate_identities
+from .currency import attribution, validate_identities, lens_attribution
+from .lenses import canonical_lens
 from .transforms import period_levels, calendar_returns
 from .metrics import risk_metrics, drawdown_episodes
 from .rolling import (
@@ -34,11 +35,12 @@ class ResearchLab:
         self.bootstrap_cache = {}
         self.identity_errors = validate_identities(daily)
 
-    def analyze(self, start=None, end=None, include_ytd=False):
+    def analyze(self, start=None, end=None, include_ytd=False, perspective="Indian investor"):
         """Cache range-dependent results; cosmetic changes never recompute them."""
         start = pd.Timestamp(start or self.daily.index[0])
         end = pd.Timestamp(end or self.daily.index[-1])
-        key = (start, end, include_ytd)
+        perspective = canonical_lens(perspective)
+        key = (start, end, include_ytd, perspective)
         if key in self._cache:
             return self._cache[key]
         daily = self.daily.loc[start:end]
@@ -51,7 +53,7 @@ class ResearchLab:
             h: rolling_cagr(monthly, h, self.config.rolling_tolerance_days)
             for h in HORIZONS
         }
-        annual = calendar_returns(daily, include_ytd=include_ytd)
+        annual = calendar_returns(daily, include_ytd=include_ytd, perspective=perspective)
         fx_table = attribution(annual.select_dtypes("number"))
         snapshots = period_levels(daily, "annual", include_partial=True)
         for label in fx_table.index:
@@ -60,9 +62,9 @@ class ResearchLab:
             fx_table.loc[label, "USDINR_start"] = snapshots.iloc[loc - 1][FX]
             fx_table.loc[label, "USDINR_end"] = snapshots.iloc[loc][FX]
         holding, endpoints = matrices(
-            daily, tolerance_days=self.config.rolling_tolerance_days
+            daily, tolerance_days=self.config.rolling_tolerance_days, perspective=perspective
         )
-        corr, rolling_corr = correlations(daily)
+        corr, rolling_corr = correlations(daily, perspective)
         episodes = pd.concat(
             [drawdown_episodes(daily[c]).assign(Series=c) for c in daily.columns],
             ignore_index=True,
@@ -74,20 +76,23 @@ class ResearchLab:
             rolling=rolling,
             rolling_summaries={h: summary(r) for h, r in rolling.items()},
             rolling_excess=pd.DataFrame(
-                {h: excess_summary(r) for h, r in rolling.items()}
+                {h: excess_summary(r, perspective) for h, r in rolling.items()}
             ).T,
-            trailing=trailing_cagr(daily),
+            trailing=trailing_cagr(daily, perspective=perspective),
             holding=holding,
             endpoints=endpoints,
             fx_annual=fx_table,
             fx_rolling={h: self._rolling_attribution(r) for h, r in rolling.items()},
+            lens_fx_annual=lens_attribution(annual.select_dtypes("number"), perspective),
+            lens_fx_rolling={h: lens_attribution(r, perspective) for h, r in rolling.items()},
             risk=risk_metrics(daily, self.config.downside_target_annual),
             drawdowns=episodes,
-            probability=probability_curve(monthly),
+            probability=probability_curve(monthly, self.config.rolling_tolerance_days, perspective),
             correlations=corr,
             rolling_correlations=rolling_corr,
-            regimes=fx_regimes(daily),
+            regimes=fx_regimes(daily, perspective),
             nonoverlap={h: non_overlapping(monthly, h) for h in HORIZONS},
+            perspective=perspective, include_ytd=include_ytd,
         )
         self._cache[key] = result
         return result
@@ -148,7 +153,8 @@ def research_summary(result, horizon=10, perspective="Indian investor"):
     d = result["daily"]
     if r.empty:
         return f"{horizon}Y: insufficient history in {d.index[0].date()}–{d.index[-1].date()}. No windows invented."
-    a, b = (NIFTY, SP_INR) if perspective == "Indian investor" else (NIFTY_USD, SP)
+    from .lenses import lens_pair
+    a, b = lens_pair(perspective)
     e = excess_summary(r, perspective)
     risk = result["risk"]
     return (
@@ -177,8 +183,13 @@ def tables_for_export(result, lab, bootstrap=None):
         ]
     )
     tables = {
+        "Analysis_State": pd.DataFrame([dict(Investor_lens=result["perspective"],
+            Start=str(result["daily"].index[0].date()), End=str(result["daily"].index[-1].date()),
+            Include_YTD=result["include_ytd"])]),
         "Metadata": meta,
         "Validation": lab.validation,
+        "Daily_Levels": result["daily"], "Monthly_Levels": result["monthly"],
+        "Source_Dates": lab.audit.loc[result["daily"].index],
         "Annual_Returns": result["annual"],
         "Trailing_CAGR": result["trailing"],
         "FX_Attribution": result["fx_annual"],
@@ -196,6 +207,10 @@ def tables_for_export(result, lab, bootstrap=None):
         tables[f"Summary_{h}Y"] = result["rolling_summaries"][h]
         tables[f"Nonoverlap_{h}Y"] = result["nonoverlap"][h]
         tables[f"FX_Rolling_{h}Y"] = result["fx_rolling"][h]
+        for i, (asset, frame) in enumerate(result["lens_fx_rolling"][h].items()):
+            tables[f"Home_FX_{i+1}_{h}Y"] = frame
+    for i, (asset, frame) in enumerate(result["lens_fx_annual"].items()):
+        tables[f"Home_FX_Annual_{i+1}"] = frame
     if bootstrap is not None:
         tables["Bootstrap"] = bootstrap
     return tables

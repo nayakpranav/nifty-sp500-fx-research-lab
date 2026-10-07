@@ -76,7 +76,7 @@ def period_levels(
     return out
 
 
-def calendar_returns(daily, include_ytd=False, now=None):
+def calendar_returns(daily, include_ytd=False, now=None, perspective="Indian investor"):
     """Previous completed year-end to next year-end, with explicit partial labels."""
     year = period_levels(daily, "annual", include_partial=True)
     result = year.pct_change(fill_method=None).iloc[1:].copy()
@@ -94,11 +94,12 @@ def calendar_returns(daily, include_ytd=False, now=None):
     result.index = pd.Index(labels, name="Year")
     if not include_ytd:
         result = result.loc[complete]
-    from .config import NIFTY, SP_INR
+    from .lenses import lens_pair, home_currency
+    nifty, sp = lens_pair(perspective)
 
     result["Winner"] = [
-        "S&P INR" if x > y else "NIFTY" if x < y else "Tie"
-        for x, y in zip(result[SP_INR], result[NIFTY])
+        f"S&P 500 · {home_currency(perspective)}" if x > y + 1e-12 else f"NIFTY 50 · {home_currency(perspective)}" if x < y - 1e-12 else "Tie"
+        for x, y in zip(result[sp], result[nifty])
     ]
     return result
 

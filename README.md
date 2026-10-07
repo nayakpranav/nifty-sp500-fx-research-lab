@@ -1,77 +1,84 @@
-# NIFTY 50 × S&P 500 × INR Research Lab
+# NIFTY 50 × S&P 500 × FX Research Lab
 
-Interactive Streamlit research dashboard comparing the **NIFTY 50 Total Return Index** and **S&P 500 Total Return Index** from an Indian-investor perspective, with explicit USD/INR attribution, rolling holding-period analysis, risk diagnostics and statistical robustness checks.
+A dark institutional Streamlit research dashboard comparing dividend-reinvested **NIFTY 50 Total Return Index** and **S&P 500 Total Return** across **INR, USD and EUR investor lenses**. Deterministic interpretation explains performance, FX contribution, holding-period consistency and risk. This extends the original engine rather than replacing its calculations.
 
-## Canonical comparison
+## Canonical fair comparison
 
-The primary comparison begins exactly on **30 June 1999** for both equity indices. Earlier S&P 500 history is deliberately excluded from comparative calculations. The end date is determined dynamically from the latest validated common observation across NIFTY TRI, S&P 500 TR and USD/INR.
+The default comparison begins **exactly 30 June 1999**. Earlier S&P history is retained only as source provenance. The end is the latest validated common valuation cutoff across all four primitive sources. A user may choose a later research subrange; the app fails closed if the canonical start is unavailable.
 
-## Normal workflow
+## Workflow
 
-1. Open the deployed Streamlit application.
-2. Click **Run Analysis**.
-3. Use the tabs.
+**Open app → Run Analysis → Use dashboard.** Market histories are retrieved and validated automatically. Refresh live data updates providers. No CSV maintenance, uploads or notebook workflow is required.
 
-There is no CSV upload, ZIP upload, Colab notebook, dependency-install step or manual market-data maintenance.
+## Live sources and verified FX direction
 
-## Live data architecture
-
-| Series | Source | Role |
+| Primitive | Provider | Units / role |
 |---|---|---|
-| NIFTY 50 Total Return Index | NSE Indices | Indian equity total return in INR |
-| S&P 500 Total Return | Yahoo Finance ^SP500TR | US equity total return in USD |
-| USD/INR | Federal Reserve / FRED DEXINUS | INR per USD |
+| NIFTY 50 TRI | NSE Indices total-return endpoint | INR native equity total return |
+| S&P 500 TR | Yahoo Finance `^SP500TR` | USD native equity total return |
+| USD/INR | Federal Reserve / FRED `DEXINUS` | INR per USD |
+| EUR/USD | Federal Reserve / FRED `DEXUSEU` | USD per EUR |
 
-On first execution the app retrieves the full required histories directly from the providers. The running Streamlit container creates a validated local runtime cache and refreshes it when the source is behind the current date or when **Refresh live data** is pressed.
+DEXUSEU's **Units** metadata is verified programmatically as **U.S. Dollars to One Euro** before download. Wrong or missing evidence stops retrieval; the code never guesses or silently inverts direction. Provider metadata and daily positive/finite observations are validated, and runtime caches are checksum protected. Required data are refreshed dynamically; failed retrieval never silently substitutes a price index or stale upload.
 
-The application never silently substitutes the NIFTY price index (^NSEI) or S&P 500 price index (^GSPC).
+## Investor lenses and exact conversion
 
-## Dashboard
+- **INR-based investor:** NIFTY in native INR vs S&P translated to INR.
+- **USD-based investor:** NIFTY translated to USD vs S&P in native USD.
+- **EUR-based investor:** both investments translated into EUR. The NIFTY flow is EUR savings → INR → Indian equity → EUR wealth.
 
-The application contains ten lazy-loaded tabs:
+With `USDINR = INR/USD` and `EURUSD = USD/EUR`:
 
-- **Overview** — common sample, headline CAGRs, ending wealth and research summary.
-- **Wealth** — equal-start normalized wealth comparison.
-- **Annual Returns** — calendar-year heatmap and table.
-- **Rolling Returns** — 1/3/5/7/10/15/20-year rolling CAGR, excess returns and distributions.
-- **Outperformance** — win probability, start-year × holding-period matrix and endpoint sensitivity.
-- **Currency** — USD equity return and INR currency contribution.
-- **Risk & Drawdowns** — drawdowns, risk metrics, volatility and correlations.
-- **Robustness** — non-overlapping windows and on-demand 5,000-replication moving-block bootstrap.
-- **Methodology** — source provenance, validation and methodological boundaries.
-- **Export** — XLSX, CSV and interactive HTML figure downloads.
+```text
+EURINR = USDINR × EURUSD
+SP_INR = SP_USD × USDINR
+NIFTY_USD = NIFTY_INR ÷ USDINR
+NIFTY_EUR = NIFTY_INR ÷ EURINR
+SP_EUR = SP_USD ÷ EURUSD
+```
 
-## Methodology
+The return identities and exact log attribution are checked numerically to `1e-10`. Arithmetic CAGR gaps are labelled separately from exact annual log contributions. The foreign-investor interpretation calculates the local equity CAGR needed to match the home-currency S&P return on the observed FX path.
 
-For an Indian investor:
+## Dashboard and preserved research depth
 
-1 + R(S&P, INR) = (1 + R(S&P, USD)) × (1 + R(USD/INR))
+Ten tabs cover Overview, Wealth, Annual Returns, Rolling Returns, Outperformance, Currency, Risk & Drawdowns, Robustness, Methodology and Export. The midnight navy theme, explicit currency labels, solid/dashed traces, blue-to-dark-to-amber heatmaps, five untruncated headline cards and secondary investor strip are shared with the standalone report. Each view includes plain-language help and contextual glossary terms.
 
-The engine validates this identity numerically. Log returns are used for exactly additive currency attribution.
+The engine retains normalized wealth, calendar/YTD returns, trailing CAGR, 1/3/5/7/10/15/20-year calendar-offset rolling CAGR, excess distributions, historical win fractions, start-year holding matrices, endpoint sensitivity, FX attribution/regimes, risk metrics, drawdown episodes, monthly/daily correlations, non-overlapping windows and paired moving-block bootstrap. A new stacked **1Y/3Y/5Y/10Y** figure shows both comparable investments in the selected currency without a spaghetti chart.
 
-India, the United States and FX markets have different holidays and closing times. Alignment therefore uses bounded backward-as-of observations and never fills an earlier research cutoff with a future observation.
+All pair-dependent statistics and bootstrap paths use the same selected currency. A common FX conversion preserves the ordering of paired equity wealth while changing absolute returns, CAGR gaps and risk; changing lenses must not manufacture a different historical winner.
 
-Rolling CAGR uses calendar offsets rather than assuming 252 × years trading observations. Overlapping long-horizon windows are descriptive, not treated as independent observations. Robustness analysis includes non-overlapping windows and paired moving-block bootstrap inference.
+## Immediately available exports
 
-## Run locally
+After each selected analysis state, cached downloads are ready automatically:
 
+1. **Full Interactive HTML Dashboard** — one offline file, with Plotly embedded once, keyboard-accessible local tabs, interactive figures, interpretation, tables, glossary, provenance, methodology and selected dates/lens/horizon/YTD/display metadata. Filename: `YYYY-MM-DD_NIFTY_SP500_FX_Research_Lab.html`.
+2. **Complete Excel Workbook** — analytical tables including primitive/derived daily and monthly levels, source-date audit, EUR attribution and inference if run.
+3. CSV bundle ZIP, Annual Returns CSV and individual interactive figure HTML ZIP.
+
+No preparation button is needed. The offline file requires no Streamlit server, websocket, CDN or API connection. Bootstrap is on demand; only results matching the current data, sample, horizon and lens enter exports. If it has not been run, the report states that clearly rather than inventing intervals. Technical CSV/XLSX exports retain compact series keys; human-facing tables and legends use centralized readable labels. Numeric return columns in the offline data tables use decimal fractions (`0.10 = 10%`).
+
+## Methodological boundaries
+
+Alignment uses a union of market sessions, bounded backward-as-of within seven calendar days, and never future-fills or bridges unknown interior gaps. Indian and US closes are asynchronous research valuations, not simultaneous executable prices. Monthly snapshots use calendar month-end labels; CAGR uses elapsed days / 365.2425. The first partial starting year is omitted; a partial terminal year is labelled YTD. Overlapping windows are descriptive and statistically dependent. Non-overlapping windows reduce overlap but retain regime dependence; moving-block intervals depend on stationarity and limited effective sample size. Sortino uses an explicit zero annual downside target, not an estimated risk-free rate.
+
+**Taxes, fees, tracking error and remittance costs are excluded.** Historical research only, without forecasts, personalized allocation or investment recommendations.
+
+## Run locally and test
+
+```bash
 python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+# Activate the virtual environment for your operating system.
+pip install -r requirements-dev.txt
+python -m pytest -q
 streamlit run streamlit_app.py
+```
+
+CI runs quantitative regression, source-direction, report and Streamlit AppTest tests. Test fixtures are explicitly synthetic and never a production fallback. Browser acceptance additionally checks the real-data dashboard and standalone HTML at desktop and laptop widths.
 
 ## Streamlit Community Cloud
 
-Deploy with:
+Repository: `nayakpranav/nifty-sp500-fx-research-lab`; branch: `main`; entry point: `streamlit_app.py`; Python 3.12. No application secrets are required. Deployment: https://nifty-sp500-fx-research-lab.streamlit.app/
 
-- Repository: nayakpranav/nifty-sp500-fx-research-lab
-- Branch: main
-- Main file: streamlit_app.py
-- Python: 3.12
+## Module boundaries
 
-No application secrets are required by the current public market-data sources.
-
-## Scope
-
-This application is historical research, not an investment-advice or forecasting engine. It does not model taxes, fund expense ratios, tracking error, remittance costs or investor-specific tax treatment.
+The original source/alignment/metrics/rolling/statistics/service modules remain. `lenses.py`, `labels.py`, `theme.py`, `glossary.py`, `interpretation.py` and `presentation.py` centralize shared semantics. `fred.py` verifies EUR metadata; `html_report.py` and `assets/report.html` generate the offline snapshot. Streamlit handles controls and rendering rather than duplicating research or narrative logic.

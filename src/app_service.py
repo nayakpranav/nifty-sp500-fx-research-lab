@@ -38,7 +38,7 @@ def build_lab(root: str | Path, *, force_refresh: bool = False) -> ResearchLab:
     if COMPARISON_START not in daily.index:
         raise DataError(
             "Fair-comparison invariant failed: 30 June 1999 is not a validated "
-            "common valuation cutoff across NIFTY TRI, S&P 500 TR and USD/INR. "
+            "common valuation cutoff across NIFTY TRI, S&P 500 TR, USD/INR and EUR/USD. "
             "The application will not silently move the requested start date."
         )
 
@@ -122,13 +122,13 @@ def csv_bundle_bytes(result: dict, lab: ResearchLab, bootstrap=None) -> bytes:
     return out.read()
 
 
-def trimmed_result(lab: ResearchLab, start, end, include_ytd=True):
+def trimmed_result(lab: ResearchLab, start, end, include_ytd=True, perspective="INR-based investor"):
     """Validated user-selected subrange; never permits pre-TRI observations."""
     start = max(pd.Timestamp(start), COMPARISON_START)
     end = min(pd.Timestamp(end), lab.daily.index[-1])
     if start >= end:
         raise ValueError("The selected range must contain at least two valuation dates.")
-    return lab.analyze(start=start, end=end, include_ytd=include_ytd)
+    return lab.analyze(start=start, end=end, include_ytd=include_ytd, perspective=perspective)
 
 
 def figure_bundle_bytes(figures: dict) -> bytes:
