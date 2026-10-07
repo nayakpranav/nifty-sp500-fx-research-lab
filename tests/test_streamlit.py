@@ -17,16 +17,23 @@ def test_landing_run_transition_three_lenses_ten_tabs_and_direct_export(lab,monk
     markup=''.join(x.value for x in at.markdown)
     assert 'primary-grid' in markup and '30 Jun 1999' in markup and '02 Oct 2026' in markup
     assert 'USD native' in markup and 'What this means' in markup
+    assert 'Investor Journey' in markup and 'economic home currency' in markup
     assert len(at.code)==0
     # tabs expose their label in session state even before the test API supports clicking them.
     for lens in LENSES:
         at.radio[0].set_value(lens).run()
         assert not at.exception
+        at.session_state['research_tabs']='Overview'
+        at.run()
+        assert 'Investor Journey' in ''.join(x.value for x in at.markdown)
+        at.selectbox[0].set_value(10000).run()
+        assert '10,000' in ''.join(x.value for x in at.markdown)
         for tab in TABS:
             at.session_state['research_tabs']=tab
             at.run()
             assert not at.exception, (lens,tab,[e.message for e in at.exception])
         assert any(d.label=='Download Full Interactive HTML Dashboard' for d in at.get('download_button'))
+        assert 'Bootstrap not run for this state' in ''.join(x.value for x in at.markdown)
         assert all('Prepare' not in b.label for b in at.button)
     # A changed date range must not export obsolete bootstrap results.
     at.session_state['bootstrap_result']={'key':('obsolete',),'ci':'PRIVATE_OLD_MARKER','meta':{}}

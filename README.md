@@ -45,6 +45,14 @@ Ten tabs cover Overview, Wealth, Annual Returns, Rolling Returns, Outperformance
 
 The engine retains normalized wealth, calendar/YTD returns, trailing CAGR, 1/3/5/7/10/15/20-year calendar-offset rolling CAGR, excess distributions, historical win fractions, start-year holding matrices, endpoint sensitivity, FX attribution/regimes, risk metrics, drawdown episodes, monthly/daily correlations, non-overlapping windows and paired moving-block bootstrap. A new stacked **1Y/3Y/5Y/10Y** figure shows both comparable investments in the selected currency without a spaghetti chart.
 
+### Investor Journey and current-data explanations
+
+The Investor Lens describes the currency in which the investor earns/saves and ultimately measures wealth. Overview's **Investor Journey** follows equal selected starting capital through both markets, including the actual starting currency conversion, native index growth and final conversion home. INR investors compare `INR → NIFTY → INR` with `INR → USD → S&P → USD → INR`; USD investors compare native S&P with translated NIFTY; EUR investors translate both routes back to euros. Intermediate conversion routing is not a third investment.
+
+Journey cards report native/home CAGR, FX CAGR, exact annual FX log contributions, arithmetic gaps, final wealth, winner, absolute wealth difference, signed NIFTY-minus-S&P percentage difference relative to S&P ending wealth, and CAGR difference. Capital scales wealth without changing growth rates. Shared deterministic helpers also explain the current annual extremes and winners, rolling ranges/positive fractions, outperformance counts/ties, matrix signs and endpoint dependence, drawdown dates, annualized volatility gaps and latest/median/minimum/maximum 36-month correlation.
+
+Horizon lengths above half the selected sample trigger a prominent **limited independent long-horizon evidence** note. An adjacent-endpoint CAGR difference change of at least 2 percentage points triggers a descriptive endpoint sensitivity flag; this is a presentation heuristic, not a statistical test. Source pills distinguish validated missing-quote notes from stale/extreme-move warnings and failures; complete diagnostics remain in Methodology. Annual heatmaps are capped at 720 px; shared title/legend spacing and responsive journey components apply to both app and offline HTML. The Export view explicitly states whether matching bootstrap inference is included.
+
 All pair-dependent statistics and bootstrap paths use the same selected currency. A common FX conversion preserves the ordering of paired equity wealth while changing absolute returns, CAGR gaps and risk; changing lenses must not manufacture a different historical winner.
 
 ## Immediately available exports

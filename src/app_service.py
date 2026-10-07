@@ -136,7 +136,7 @@ def figure_bundle_bytes(figures: dict) -> bytes:
     out = BytesIO()
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name, fig in figures.items():
-            html = fig.to_html(full_html=True, include_plotlyjs=True)
+            html = fig.to_html(full_html=True, include_plotlyjs=True,config={'displaylogo':False,'modeBarButtonsToRemove':['sendChartToCloud']})
             zf.writestr(f"{name}.html", html.encode("utf-8"))
     out.seek(0)
     return out.read()

@@ -13,6 +13,8 @@ from src.glossary import TABS
 from src.lenses import LENSES,lens_pair
 from src.labels import display_label
 from src.theme import TOKENS
+from src.investor_journey import lens_definition
+from src.interpretation import build_tab_interpretations
 
 
 @pytest.mark.parametrize('lens',LENSES)
@@ -36,14 +38,24 @@ def test_standalone_report_state_tabs_and_safe_metadata(lab,lens):
     assert state['starting_wealth']==10000 and state['logarithmic_wealth_axis'] is False
     assert not soup.select('script[src],link[href],iframe')
     assert 'Plotly.newPlot' in text and text.count('plotly.js v')==1
+    assert "modeBarButtonsToRemove:['sendChartToCloud']" in text
     assert 'addEventListener(\'click\'' in text and 'ArrowRight' in text
     assert len(soup.select('.plot-target'))==15
+    assert len(soup.select('.dense-figure'))==3
+    assert 'min-width:850px' in text and 'scroll the matrix horizontally' in soup.get_text()
     for prohibited in ['PRIVATE_MARKER','C:\\PRIVATE','localhost','127.0.0.1','_stcore','streamlit:8501']:
         assert prohibited not in text
     assert soup.select_one('.primary-grid').select('.kpi-card').__len__()==5
     assert len(soup.select('.interpretation-card'))>=5
     assert '1999-06-30' in text and '#060913' in text
     assert len(report)>4_000_000
+    assert 'Investor Journey' in soup.get_text()
+    assert lens_definition(lens) in soup.get_text()
+    cards=build_tab_interpretations(r,5,lens,10000,False)
+    for name in ['Wealth','Annual Returns','Rolling Returns','Outperformance','Currency','volatility','correlation','drawdowns','holding_matrix','endpoints']:
+        assert cards[name][0].text in soup.get_text()
+    assert 'INR-based Investor' in text and 'USD-based Investor' in text and 'EUR-based Investor' in text
+    assert state['bootstrap_inference_included'] is False
 
 
 def test_all_figures_dark_labels_accessible_and_multihorizon(lab):
@@ -64,6 +76,15 @@ def test_all_figures_dark_labels_accessible_and_multihorizon(lab):
     heatmap=figures['annual'].data[0]
     assert '2026 YTD' in heatmap.y and heatmap.zmid==0
     assert heatmap.texttemplate=='%{text}'
+    assert 650<=figures['annual'].layout.height<=720
+    for key in ['wealth','rolling','multi_horizon','volatility','correlation']:
+        fig=figures[key]
+        assert fig.layout.title.yanchor=='top'
+        assert fig.layout.legend.yanchor=='bottom' and fig.layout.legend.y==1.04
+        assert fig.layout.margin.t==135
+    assert 'Limited independent long-horizon evidence' in str(figures['probability'].data[0].customdata)
+    for component in ['Native equity','FX contribution','Home-currency total']:
+        assert len({trace.line.color for trace in figures['fx_rolling'].data if trace.name==component})==1
 
 
 def test_excel_csv_figure_exports_retained_and_current(lab):
@@ -83,3 +104,15 @@ def test_excel_csv_figure_exports_retained_and_current(lab):
 
 def test_dynamic_filename():
     assert report_filename(pd.Timestamp('2026-10-07'))=='2026-10-07_NIFTY_SP500_FX_Research_Lab.html'
+
+
+def test_matching_bootstrap_is_automatically_embedded_and_indicated(lab):
+    lens=LENSES[2]
+    r=lab.analyze(perspective=lens)
+    ci,_,meta=lab.bootstrap(r,10,replications=20,perspective=lens)
+    soup=BeautifulSoup(build_html_report(r,lab,figure_set(r,perspective=lens),perspective=lens,
+        bootstrap=ci,bootstrap_meta=meta),'html.parser')
+    assert json.loads(soup.select_one('#analysis-state').text)['bootstrap_inference_included'] is True
+    assert 'Bootstrap inference included' in soup.get_text()
+    assert 'Mean_excess_CAGR' in soup.get_text()
+    assert 'Bootstrap has not been run for this selected sample' not in soup.get_text()

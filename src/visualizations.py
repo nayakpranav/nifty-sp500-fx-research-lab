@@ -55,6 +55,8 @@ def _annual(result, perspective):
     fig = _heatmap(result['annual'][cols], f'Calendar-year total returns · {home_currency(perspective)} lens')
     fig.update_xaxes(tickmode='array',tickvals=[display_label(c) for c in cols],
         ticktext=[display_label(c).replace(' (','<br>(') for c in cols])
+    fig.update_layout(height=min(720,max(480,17*len(result['annual'])+220)),margin=dict(t=100,b=85))
+    fig.update_traces(textfont_size=11)
     return fig
 
 
@@ -78,7 +80,6 @@ def _multi_horizon(result, perspective):
         if r.empty:
             fig.add_annotation(text='Insufficient history', showarrow=False, row=row, col=1)
     fig = plotly_layout(fig, f'Holding-period comparison · {home_currency(perspective)}', height=1000)
-    fig.update_layout(legend=dict(y=1.07))
     return fig
 
 
@@ -106,9 +107,13 @@ def _distribution(result, horizon, perspective):
 
 def _probability(result, perspective):
     p = result['probability']
+    years=(result['daily'].index[-1]-result['daily'].index[0]).days/365.2425
+    audit=[[int(row.Windows),row.NIFTY_wins,row.Ties,row.Mean_advantage*100,row.Median_advantage*100,
+            'Limited independent long-horizon evidence; no forecast.' if h>years/2 else 'Overlapping windows are not independent; no forecast.'] for h,row in p.iterrows()]
     fig = go.Figure(go.Scatter(x=p.index, y=p['SP_wins'] if len(p) else [], mode='lines+markers',
         name=f'S&P wins · {home_currency(perspective)}', line=dict(color=COLORS[lens_pair(perspective)[1]], width=2.6),
-        hovertemplate='%{x} years<br>%{y:.1%} historical win fraction<extra></extra>'))
+        customdata=audit,
+        hovertemplate='%{x} years · %{customdata[0]} windows<br>S&P wins %{y:.1%} · NIFTY wins %{customdata[1]:.1%}<br>Ties %{customdata[2]:.1%}<br>S&P − NIFTY: mean %{customdata[3]:+.2f} pp · median %{customdata[4]:+.2f} pp<br>%{customdata[5]}<extra></extra>'))
     fig.add_hline(y=.5, line_dash='dot', line_color=TOKENS['muted'])
     fig.update_xaxes(title_text='Holding period · years')
     fig.update_yaxes(tickformat='.0%', range=[0,1])
@@ -133,7 +138,7 @@ def _fx(result, perspective, horizon=None):
     for row, (asset, frame) in enumerate(frames.items(), 1):
         fields = [('Equity_log', 'Native equity', TOKENS['blue']), ('Currency_log', 'FX contribution', TOKENS['amber'])]
         if horizon is not None:
-            fields.append(('Total_log', 'Home-currency total', COLORS[asset]))
+            fields.append(('Total_log', 'Home-currency total', TOKENS['mint']))
         for field, name, color in fields:
             if horizon is None:
                 trace = go.Bar(x=frame.index, y=frame[field], name=name, marker_color=color,

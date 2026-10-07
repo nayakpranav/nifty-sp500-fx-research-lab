@@ -1,5 +1,6 @@
 """Streamlit shell; analytical, narrative and report logic live in shared modules."""
 from pathlib import Path
+from contextlib import nullcontext
 import hashlib
 import html
 import json
@@ -10,10 +11,10 @@ from .app_service import (COMPARISON_START, build_lab, csv_bundle_bytes, datafra
 from .config import HORIZONS
 from .glossary import TABS, EXPLANATIONS, GLOSSARY, CONTEXT_TERMS
 from .html_report import build_html_report, report_filename, METHODOLOGY
-from .interpretation import build_overview_interpretation, lens_statistics
+from .interpretation import build_tab_interpretations, lens_statistics
 from .labels import display_label, display_table
 from .lenses import LENSES, lens_pair, home_currency
-from .presentation import hero_html, primary_kpis_html, lens_kpis_html, interpretation_html, info_html
+from .presentation import hero_html, primary_kpis_html, lens_kpis_html, interpretation_html, info_html, investor_journey_html
 from .rolling import excess_summary
 from .theme import css
 from .visualizations import figure_set
@@ -42,7 +43,11 @@ def _markup(value):
 
 
 def _plot(fig, key):
-    st.plotly_chart(fig, width='stretch', theme=None, key=key, config={'displaylogo':False,'responsive':True})
+    dense = key in ('annual','holding_matrix','endpoints')
+    with st.container(key=f'matrix_{key}') if dense else nullcontext():
+        st.plotly_chart(fig, width='stretch', theme=None, key=key, config={'displaylogo':False,'responsive':True,'modeBarButtonsToRemove':['sendChartToCloud']})
+    if dense:
+        st.caption('On narrow screens, scroll the matrix horizontally to inspect every column.')
 
 
 def _table(frame, percent_cols=(), height=360):
@@ -55,7 +60,7 @@ def _table(frame, percent_cols=(), height=360):
         if c in display and pd.api.types.is_numeric_dtype(display[c]):
             display[c] *= 100
             formats[display_label(c)] = st.column_config.NumberColumn(format='%.2f%%')
-    st.dataframe(display_table(display), width='stretch', height=height, column_config=formats)
+    st.dataframe(display_table(display), width='stretch', height=min(height,max(110,len(display)*35+45)), column_config=formats)
 
 
 def _glossary(terms=None):
@@ -75,9 +80,8 @@ def _controls(lab):
     st.sidebar.markdown('### Investor Lens')
     perspective = st.sidebar.radio('Investor Lens', LENSES, label_visibility='collapsed',
         help='Choose the currency in which you ultimately measure your savings. Both investments are translated into this same home currency.')
-    st.sidebar.caption({'INR': 'Indian equity in INR vs US equity translated to INR.',
-        'USD': 'Indian equity translated to USD vs native US equity.',
-        'EUR': 'EUR savings → INR → NIFTY → EUR, compared with S&P translated to EUR.'}[home_currency(perspective)])
+    home = home_currency(perspective)
+    st.sidebar.caption(f'You earn or save in {home} and measure final wealth in {home}. Both investments use this same home currency.')
     st.sidebar.divider()
     st.sidebar.markdown('### Holding period & display')
     horizon = st.sidebar.select_slider('Rolling horizon', options=list(HORIZONS), value=10, format_func=lambda x:f'{x}Y')
@@ -157,6 +161,10 @@ def run_app():
     active = next((i for i,t in enumerate(tabs) if t.open),0)
     name = TABS[active]
     pair = list(lens_pair(perspective))
+    interpretations=build_tab_interpretations(result,horizon,perspective,capital,include_ytd,
+        valid_bootstrap['ci'] if valid_bootstrap else None)
+    def explain(section):
+        _markup(interpretation_html(interpretations[section]))
     def figs(names):
         return figure_set(result,lab,horizon=horizon,perspective=perspective,capital=capital,log=log_scale,only=names)
     with tabs[active]:
@@ -164,20 +172,24 @@ def run_app():
         if active==0:
             _markup(primary_kpis_html(result))
             _markup(lens_kpis_html(result,perspective,capital))
+            _markup(investor_journey_html(result,perspective,capital))
             _plot(figs(['wealth'])['wealth'],'overview_wealth')
             st.markdown('### What this means')
-            _markup(interpretation_html(build_overview_interpretation(result,horizon,perspective,capital)))
+            explain('Overview')
         elif active==1:
             _plot(figs(['wealth'])['wealth'],'wealth')
+            explain('Wealth')
             with st.expander('Trailing CAGR · endpoint dependence'):
                 _table(result['trailing'],pair+['Difference'])
         elif active==2:
             _plot(figs(['annual'])['annual'],'annual')
+            explain('Annual Returns')
             annual=result['annual'][pair+[c for c in result['annual'] if c not in pair]]
             _table(annual,annual.select_dtypes('number').columns)
         elif active==3:
             f=figs(['rolling','multi_horizon','excess','distributions'])
             _plot(f['rolling'],'rolling')
+            explain('Rolling Returns')
             e=excess_summary(result['rolling'][horizon],perspective)
             c=st.columns(4)
             c[0].metric('S&P historical win fraction',f'{e.SP_wins:.1%}' if e.Windows else 'Unavailable')
@@ -191,6 +203,7 @@ def run_app():
         elif active==4:
             for key,fig in figs(['probability','holding_matrix','endpoints']).items():
                 _plot(fig,key)
+                explain('Outperformance' if key=='probability' else key)
         elif active==5:
             s=lens_statistics(result,perspective,capital)
             c=st.columns(3)
@@ -199,7 +212,7 @@ def run_app():
             c[0].metric(f'Local {native} CAGR · {asset}',f'{s["local_cagr"]:.2%}')
             c[1].metric(f'{home_currency(perspective)}-denominated CAGR · {asset}',f'{s["translated_cagr"]:.2%}')
             c[2].metric('Exact annual FX log contribution',f'{s["fx_log"]*100:+.2f} log pp')
-            _markup(interpretation_html([build_overview_interpretation(result,horizon,perspective,capital)[1]]))
+            explain('Currency')
             for key,fig in figs(['fx_attribution','fx_rolling']).items():
                 _plot(fig,key)
             for asset,frame in result['lens_fx_annual'].items():
@@ -211,12 +224,14 @@ def run_app():
         elif active==6:
             for key,fig in figs(['drawdowns','volatility','correlation']).items():
                 _plot(fig,key)
+                explain(key)
             st.markdown('### Home-currency risk metrics')
             _table(result['risk'].loc[pair],['CAGR','Annualized_volatility','Downside_deviation','MAR_annual','Max_drawdown','Ulcer_index','Best_year','Worst_year','Positive_years','Positive_months','Worst_month','Best_month','Historical_monthly_VaR05','Historical_monthly_ES05'])
             with st.expander('Drawdown episodes and correlation tables'):
                 _table(result['drawdowns'][result['drawdowns'].Series.isin(pair)],['depth'])
                 _table(result['correlations'])
         elif active==7:
+            explain('Robustness')
             st.markdown(f'### Non-overlapping {horizon}-year windows')
             _table(result['nonoverlap'][horizon][pair+['Start_date','End_date']],pair)
             st.caption('Partition starts at the selected sample origin; disjoint windows can still share persistent regimes.')
@@ -234,6 +249,7 @@ def run_app():
             else:
                 st.caption('Run the bootstrap to include its intervals in this selected-state HTML, Excel and CSV snapshot.')
         elif active==8:
+            explain('Methodology')
             _markup(info_html(METHODOLOGY))
             st.markdown('### Data provenance')
             _table(source_status(lab))
@@ -243,6 +259,7 @@ def run_app():
             st.success(f'Currency identities pass · maximum numerical error {error:.3g}')
             _glossary()
         elif active==9:
+            explain('Export')
             st.markdown('### Download this research snapshot')
             st.caption(f'{perspective} · {result["daily"].index[0]:%d %b %Y} → {result["daily"].index[-1]:%d %b %Y} · {horizon}Y rolling horizon · YTD {"included" if include_ytd else "excluded"}')
             st.download_button('Download Full Interactive HTML Dashboard',downloads['html'],report_filename(),'text/html',type='primary',width='stretch')

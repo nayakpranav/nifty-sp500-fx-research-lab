@@ -14,6 +14,9 @@ EXPLANATIONS = {
     "Export": "Offline HTML contains interactive figures, tables, interpretation and methodology for this selected state. Excel contains complete analytical tables; CSV bundles and individual figure HTML files provide reusable research data.",
 }
 GLOSSARY = {
+    "INR-based Investor": "Investor whose economic wealth begins and ends in INR: saves in rupees and measures the final outcome in rupees.",
+    "USD-based Investor": "Investor whose economic wealth begins and ends in USD: saves in dollars and measures the final outcome in dollars.",
+    "EUR-based Investor": "Investor whose economic wealth begins and ends in EUR: saves in euros and measures the final outcome in euros.",
     "CAGR": "Compound annual growth rate: the constant yearly rate linking starting and ending wealth; not an average of yearly returns.",
     "TRI": "Total Return Index, including reinvested dividends.",
     "Total Return": "Price change plus reinvested dividends; TR is its abbreviation.",
