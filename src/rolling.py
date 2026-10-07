@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from .config import DAYS_PER_YEAR, NIFTY, SP_INR, HORIZONS
 from .metrics import cagr
+from .lenses import lens_pair
 
 
 def window_indices(index, horizon, tolerance_days=7):
@@ -73,9 +74,7 @@ def excess_summary(
     rolling: pd.DataFrame, perspective: str = "Indian investor"
 ) -> pd.Series:
     """Paired win, loss and tie probabilities plus signed and conditional advantages."""
-    from .config import SP, NIFTY_USD
-
-    a, b = (SP_INR, NIFTY) if perspective == "Indian investor" else (SP, NIFTY_USD)
+    b, a = lens_pair(perspective)
     delta = (rolling[a] - rolling[b]).dropna()
     delta = delta.mask(delta.abs() <= 1e-12, 0.0)
     return pd.Series(
@@ -105,8 +104,9 @@ def probability_curve(levels, tolerance_days=7, perspective="Indian investor"):
     ).T.rename_axis("Horizon")
 
 
-def trailing_cagr(levels, endpoint=None):
+def trailing_cagr(levels, endpoint=None, perspective="Indian investor"):
     """First available cutoff in each year to selected last available endpoint."""
+    nifty, sp = lens_pair(perspective)
     end = (
         levels.index[-1]
         if endpoint is None
@@ -120,18 +120,19 @@ def trailing_cagr(levels, endpoint=None):
             continue
         values = cagr(row, sample.loc[end], date, end).to_dict()
         values.update(Start_year=date.year, Start_date=date, End_date=end)
-        values["Difference"] = values[SP_INR] - values[NIFTY]
+        values["Difference"] = values[sp] - values[nifty]
         rows.append(values)
     return pd.DataFrame(rows)
 
 
-def matrices(levels, horizons=HORIZONS, tolerance_days=7):
+def matrices(levels, horizons=HORIZONS, tolerance_days=7, perspective="Indian investor"):
     """One first cutoff per start year; hold to backward-as-of anniversary.
 
     Endpoint matrix holds first cutoff in a starting year to final cutoff in
     ending year. Partial terminal year is explicitly labelled with actual date.
     Full detail tables drive hover text and exports.
     """
+    nifty, sp = lens_pair(perspective)
     starts = levels.groupby(levels.index.year).head(1)
     ends = levels.groupby(levels.index.year).tail(1)
     holding_rows, endpoint_rows = [], []
@@ -154,9 +155,8 @@ def matrices(levels, horizons=HORIZONS, tolerance_days=7):
                     Horizon=f"{horizon}Y",
                     Start_date=start,
                     End_date=end,
-                    NIFTY=vals[NIFTY],
-                    SP_INR=vals[SP_INR],
-                    Difference=vals[SP_INR] - vals[NIFTY],
+                    **{nifty: vals[nifty], sp: vals[sp]},
+                    Difference=vals[sp] - vals[nifty],
                 )
             )
         for end, final in ends.iterrows():
@@ -175,9 +175,8 @@ def matrices(levels, horizons=HORIZONS, tolerance_days=7):
                     End_year=label,
                     Start_date=start,
                     End_date=end,
-                    NIFTY=vals[NIFTY],
-                    SP_INR=vals[SP_INR],
-                    Difference=vals[SP_INR] - vals[NIFTY],
+                    **{nifty: vals[nifty], sp: vals[sp]},
+                    Difference=vals[sp] - vals[nifty],
                 )
             )
     return pd.DataFrame(holding_rows), pd.DataFrame(endpoint_rows)

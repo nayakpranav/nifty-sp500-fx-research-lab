@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Offline total-return research snapshot for {{ metadata.investor_lens }}">
+<title>NIFTY 50 × S&amp;P 500 × FX Research Lab</title><style>{{ css }}</style>
+<script>{{ plotly_js }}</script></head><body><main class="report">
+{{ hero }}
+<div class="section-note"><strong>{{ metadata.investor_lens }}</strong> · {{ metadata.actual_start }} → {{ metadata.actual_end }} · {{ metadata.rolling_horizon_years }}Y rolling horizon · YTD {{ 'included' if metadata.include_ytd else 'excluded' }} · {{ metadata.starting_wealth }} starting wealth.<br>Generated {{ metadata.generated_at }}. Offline research snapshot. Taxes excluded.</div>
+<script id="analysis-state" type="application/json">{{ metadata_json }}</script>
+<nav class="report-nav" role="tablist" aria-label="Research sections">
+{% for panel in panels %}<button id="tab-{{ loop.index0 }}" role="tab" aria-controls="{{ panel.id }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}">{{ panel.name }}</button>{% endfor %}
+</nav>
+{% for panel in panels %}<section class="report-panel" id="{{ panel.id }}" role="tabpanel" aria-labelledby="tab-{{ loop.index0 }}" tabindex="0" {% if not loop.first %}hidden{% endif %}><h2>{{ panel.name }}</h2>{{ panel.content }}</section>{% endfor %}
+</main><script>
+(() => {
+ const tabs = [...document.querySelectorAll('[role="tab"]')];
+ function render(panel) {
+  panel.querySelectorAll('.plot-target').forEach(el => {
+   if (el.dataset.rendered) {Plotly.Plots.resize(el); return;}
+   const spec = JSON.parse(document.getElementById(el.dataset.spec).textContent);
+   Plotly.newPlot(el, spec.data, spec.layout, {responsive:true,displaylogo:false});
+   el.dataset.rendered = 'true';
+  });
+ }
+ function activate(index, focus=false) {
+  tabs.forEach((tab,i) => {
+   const active = i === index;
+   tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1;
+   document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+  });
+  const panel = document.getElementById(tabs[index].getAttribute('aria-controls'));
+  requestAnimationFrame(() => render(panel));
+  if(focus) tabs[index].focus();
+ }
+ tabs.forEach((tab,i) => {
+  tab.addEventListener('click', () => activate(i));
+  tab.addEventListener('keydown', e => {
+   let next=i;
+   if(e.key==='ArrowRight') next=(i+1)%tabs.length;
+   else if(e.key==='ArrowLeft') next=(i+tabs.length-1)%tabs.length;
+   else if(e.key==='Home') next=0;
+   else if(e.key==='End') next=tabs.length-1;
+   else return;
+   e.preventDefault();activate(next,true);
+  });
+ });
+ window.addEventListener('resize', () => document.querySelectorAll('.report-panel:not([hidden]) .plot-target[data-rendered]').forEach(el => Plotly.Plots.resize(el)));
+ activate(0);
+})();
+</script></body></html>

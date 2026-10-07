@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 import requests
 
-from .config import REQUIRED, NIFTY, SP, FX, NSE_URL, NSE_API
+from .config import REQUIRED, NIFTY, SP, FX, EURUSD, NSE_URL, NSE_API
+from .fred import verify_eurusd_metadata
 from .validation import DataError, validate_series, require_valid
 
 
@@ -181,6 +182,30 @@ def fred_fx():
     return series, metadata
 
 
+def fred_eurusd():
+    """Verify FRED DEXUSEU Units, then retrieve daily USD per EUR observations."""
+    page_url = "https://fred.stlouisfed.org/series/DEXUSEU"
+    response = requests.get(page_url, timeout=25)
+    response.raise_for_status()
+    direction = verify_eurusd_metadata(response.text)
+    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSEU&cosd=1999-01-01"
+    response = requests.get(url, timeout=30)
+    response.raise_for_status()
+    frame = pd.read_csv(StringIO(response.text), na_values=["."])
+    date_col = "observation_date" if "observation_date" in frame else "DATE"
+    if "DEXUSEU" not in frame or date_col not in frame:
+        raise DataError("FRED returned an unexpected DEXUSEU schema.")
+    dates = pd.to_datetime(frame[date_col], format="%Y-%m-%d", errors="raise")
+    missing = frame["DEXUSEU"].isna()
+    series = pd.Series(pd.to_numeric(frame.loc[~missing, "DEXUSEU"], errors="raise").to_numpy(),
+                       index=pd.DatetimeIndex(dates[~missing]), name=EURUSD)
+    metadata = dict(direction, ticker="DEXUSEU", index_name="U.S. Dollars to Euro Spot Exchange Rate",
+                    source="Federal Reserve H.10 / FRED DEXUSEU", source_url=page_url, download_url=url,
+                    return_type="FX", retrieval_timestamp=timestamp(), missing_source_observations=int(missing.sum()))
+    require_valid(validate_series(series, metadata))
+    return series, metadata
+
+
 def save_cache(series, metadata, config):
     """Persist provider observations inside the running Streamlit container."""
     path = config.root / "data/raw" / f"{series.name}.csv"
@@ -236,6 +261,8 @@ def load_sources(config, tri_csv=None, tri_metadata=None):
                 series, meta = official_tri()
             elif name == SP:
                 series, meta = yahoo_sp()
+            elif name == EURUSD:
+                series, meta = fred_eurusd()
             else:
                 series, meta = fred_fx()
             meta = save_cache(series, meta, config)
