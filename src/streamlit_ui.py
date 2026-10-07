@@ -96,17 +96,61 @@ def _controls(lab):
 
 
 def _landing():
+    # Landing-only styles keep analytical views and offline exports unchanged.
+    _markup(f'<style>{(ROOT / "assets" / "landing.css").read_text(encoding="utf-8")}</style>')
     _markup(hero_html())
-    _markup('''<div class="landing-grid"><section class="landing-card"><div class="hero-kicker">01 · Start your research</div>
-    <h2>One common start. Three investor lenses.</h2><p>Run Analysis to retrieve and validate the latest total-return and exchange-rate histories.
-    Explore long-run wealth, rolling holding periods, currency effects and risk in INR, USD or EUR.</p>
-    <div class="section-note">30 June 1999 → latest common validated observation.<br>TRI / TR include reinvested dividends.</div>
-    <p>Download a complete interactive dashboard to revisit the research offline.</p></section>
-    <section class="landing-card"><div class="hero-kicker">02 · Verified live sources</div><h2>Equity growth + currency movement</h2>
+    if st.button('Run Analysis',type='primary',key='landing_run_analysis'):
+        st.session_state.analysis_ready=True
+        st.rerun()
+    _markup('''<div class="landing-introduction">
+    <section class="landing-card landing-purpose" aria-label="Why I built this">
+    <div class="hero-kicker">01 · The idea behind the lab</div><h2>Why I built this</h2>
+    <p>A market can deliver excellent returns in its local currency. But if you earn and save in another currency,
+    what matters is the investment's value <strong>after converting it back into your home currency.</strong></p>
+    <div class="landing-euro-example"><span class="landing-example-label">🇪🇺 A euro saver in Germany or elsewhere in Europe</span>
+    <p>You may send euros to India, convert EUR to INR, invest in NIFTY, and later convert your INR wealth back to EUR.
+    A weaker rupee against the euro reduces that return; a stronger rupee can help. Equity growth is only part of your outcome.</p></div>
+    </section>
+    <section class="landing-lenses" aria-label="Three investor lenses">
+    <div class="landing-section-heading"><h2>One home currency. Two investment routes.</h2>
+    <p>Your investor lens is the currency in which you <strong>earn, save and ultimately measure wealth.</strong></p></div>
+    <div class="landing-lens-grid">
+    <article class="landing-card landing-lens"><h3><span aria-hidden="true">🇮🇳</span> INR-based investor</h3>
+    <div class="landing-route-label">Indian equity</div><p class="landing-route">INR → NIFTY → INR</p>
+    <div class="landing-versus">versus</div><div class="landing-route-label">US equity</div>
+    <p class="landing-route landing-route-us">INR → USD → S&amp;P 500 → USD → INR</p></article>
+    <article class="landing-card landing-lens"><h3><span aria-hidden="true">🇺🇸</span> USD-based investor</h3>
+    <div class="landing-route-label">Indian equity</div><p class="landing-route">USD → INR → NIFTY → INR → USD</p>
+    <div class="landing-versus">versus</div><div class="landing-route-label">US equity</div>
+    <p class="landing-route landing-route-us">USD → S&amp;P 500 → USD</p></article>
+    <article class="landing-card landing-lens"><h3><span aria-hidden="true">🇪🇺</span> EUR-based investor</h3>
+    <div class="landing-route-label">Indian equity</div><p class="landing-route">EUR → INR → NIFTY → INR → EUR</p>
+    <div class="landing-versus">versus</div><div class="landing-route-label">US equity</div>
+    <p class="landing-route landing-route-us">EUR → USD → S&amp;P 500 → USD → EUR</p></article>
+    </div></section>
+    <section class="landing-explore" aria-label="What you can explore">
+    <div class="landing-section-heading"><h2>What you can explore</h2><p>From the big picture to the evidence behind it.</p></div>
+    <div class="landing-explore-grid">
+    <article><span class="landing-explore-icon" aria-hidden="true">◈</span><h3>Overview</h3><p>Your home-currency outcome.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">↗</span><h3>Wealth</h3><p>Follow equal starting investments.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">▦</span><h3>Annual Returns</h3><p>Compare each year's results.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">↻</span><h3>Rolling Returns</h3><p>Try different holding periods.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">⇄</span><h3>Outperformance</h3><p>See historical winner frequencies.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">⇌</span><h3>Currency</h3><p>Separate equity growth from FX.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">⌁</span><h3>Risk &amp; Drawdowns</h3><p>Inspect losses and co-movement.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">◇</span><h3>Robustness</h3><p>Understand uncertainty and overlap.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">≡</span><h3>Methodology</h3><p>Inspect sources and assumptions.</p></article>
+    <article><span class="landing-explore-icon" aria-hidden="true">↓</span><h3>Export</h3><p>Take the research offline.</p></article>
+    </div></section>
+    <footer class="landing-footer"><p>Historical market research. Taxes, fees, tracking error and remittance costs are excluded.</p>
+    <!-- Add the secondary ☕ Support this project anchor here once its URL is provided. -->
+    <div class="landing-support-slot"></div></footer></div>''')
+    with st.expander('Verified live sources & common sample'):
+        _markup('''<section class="landing-card"><h2>Equity growth + currency movement</h2>
     <div class="source-line">NIFTY 50 Total Return Index · NSE Indices</div><div class="source-line">S&amp;P 500 Total Return · Yahoo ^SP500TR</div>
     <div class="source-line">USD/INR · FRED DEXINUS · INR per USD</div><div class="source-line">EUR/USD · FRED DEXUSEU · USD per EUR</div>
-    <p>Market calendars are aligned using recent past observations. Each source's units and identity are checked before calculations.</p></section></div>''')
-    _markup(info_html('Historical market research. Taxes, fees, tracking error and remittance costs are excluded.'))
+    <p>30 June 1999 → latest common validated observation. TRI / TR include reinvested dividends.</p>
+    <p>Market calendars are aligned using recent past observations. Each source's units and identity are checked before calculations.</p></section>''')
     _glossary(CONTEXT_TERMS['Overview'])
 
 
