@@ -1,0 +1,52 @@
+:root {
+  --ink: #0d1b2a;
+  --muted: #5f6b7a;
+  --line: #dce3ea;
+  --panel: #ffffff;
+  --soft: #f6f8fb;
+  --nifty: #1167b1;
+  --sp: #d2651e;
+  --fx: #138a72;
+}
+
+.block-container {max-width: 1460px; padding-top: 1.35rem; padding-bottom: 4rem;}
+[data-testid="stHeader"] {background: rgba(255,255,255,.93);}
+[data-testid="stSidebar"] {border-right: 1px solid var(--line);}
+h1, h2, h3 {letter-spacing: -0.025em; color: var(--ink);}
+p, label, [data-testid="stCaptionContainer"] {color: var(--muted);}
+
+.hero {
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, #ffffff 0%, #f6f8fb 100%);
+  border-radius: 18px;
+  padding: 1.4rem 1.6rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 10px 28px rgba(13,27,42,.055);
+}
+.hero-kicker {font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #536276;}
+.hero-title {font-size: 2.05rem; font-weight: 760; line-height: 1.08; margin: .3rem 0 .45rem; color: var(--ink);}
+.hero-sub {font-size: .98rem; max-width: 950px; color: var(--muted);}
+
+.status-strip {display:flex; gap:.55rem; flex-wrap:wrap; margin:.6rem 0 .2rem;}
+.status-pill {border:1px solid #cfd9e5; border-radius:999px; background:white; padding:.32rem .62rem; font-size:.78rem; color:#334155;}
+.status-dot {display:inline-block; width:7px; height:7px; border-radius:50%; background:#138a72; margin-right:6px;}
+
+.kpi-card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 1rem 1rem .9rem;
+  min-height: 116px;
+  box-shadow: 0 5px 16px rgba(13,27,42,.035);
+}
+.kpi-label {font-size:.73rem; text-transform:uppercase; letter-spacing:.08em; color:#687587; font-weight:700;}
+.kpi-value {font-size:1.62rem; color:var(--ink); font-weight:730; margin:.22rem 0 .08rem;}
+.kpi-note {font-size:.76rem; color:#7a8797;}
+
+.section-note {border-left:3px solid #8aa1b8; padding:.45rem .8rem; background:#f8fafc; color:#596779; font-size:.86rem; margin:.6rem 0 1rem;}
+[data-baseweb="tab-list"] {gap:.25rem; border-bottom:1px solid var(--line);}
+button[data-baseweb="tab"] {padding:.72rem .9rem; font-weight:650;}
+[data-testid="stDataFrame"] {border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+[data-testid="stPlotlyChart"] {border:1px solid var(--line); border-radius:14px; padding:.35rem; background:white;}
+[data-testid="stMetric"] {border:1px solid var(--line); border-radius:12px; padding:.7rem .85rem; background:white;}
+hr {border-color:var(--line);}
