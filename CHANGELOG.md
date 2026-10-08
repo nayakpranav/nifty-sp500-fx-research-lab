@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-10-07 — Investor journey and final polish
+## 2026-10-07: Investor journey and final polish
 
 - Added home-currency journey cards with actual entry/exit FX amounts, selected starting capital, native/home returns, exact FX contributions, wealth differences and winner for INR/USD/EUR.
 - Added shared current-data interpretations in all analytical tabs and offline HTML, including rolling-window extremes, annual winners, long-horizon dependence, matrix signs, endpoint sensitivity, volatility, drawdown dates and 36-month correlation summaries.
@@ -9,7 +9,7 @@
 - Added investor-lens glossary definitions and explicit bootstrap inclusion status in exports; preserved the original sample, sources, analytical calculations and export formats.
 - Added journey accounting, scaling, lens-specific risk/correlation, narrative, status and offline parity regression tests.
 
-## 2026-10-07 — Dark dashboard and investor lenses
+## 2026-10-07: Dark dashboard and investor lenses
 
 - Added a midnight navy theme shared by Streamlit, Plotly and offline reports, responsive untruncated sample dates, five universal KPIs and a secondary home-currency strip.
 - Added verified FRED DEXUSEU retrieval, EUR/INR cross-rate, NIFTY EUR and S&P EUR conversions, numerical identity checks and tests.
