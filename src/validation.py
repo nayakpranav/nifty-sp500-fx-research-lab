@@ -63,9 +63,24 @@ def validate_series(series, metadata, now=None, stale_days=14):
             "official_endpoint",
             "provider_metadata",
             "authoritative_csv_attestation",
+            "verified_provider_anchor",
             "synthetic",
         )
         identity &= metadata.get("ticker") not in ("^NSEI", "^GSPC")
+        if metadata.get("identity_evidence") == "verified_provider_anchor":
+            identity &= (
+                name == SP and metadata.get("ticker") == "^SP500TR"
+                and metadata.get("anchor_checked") is True
+                and metadata.get("currency") == "USD"
+            )
+            issue(
+                "Yahoo summary metadata",
+                "WARNING" if identity else "FAIL",
+                "Quote-summary name/currency unavailable. Verified the exact "
+                "^SP500TR provider's dated total-return index level against "
+                "its independently published USD reference. Inspect source "
+                "provenance if the provider recovers or changes.",
+            )
         issue(
             "total-return identity",
             "PASS" if identity else "FAIL",
