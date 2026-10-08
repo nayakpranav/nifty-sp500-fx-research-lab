@@ -104,7 +104,7 @@ def _landing():
         <div class="landing-eyebrow">Quantitative market research · INR / USD / EUR</div>
         <h1>NIFTY 50 × S&amp;P 500 × FX<span>Research Lab</span></h1>
         <p class="landing-thesis">The return you see is not always the return you get.</p>
-        <p class="landing-subtitle">Compare Indian and US equities from INR, USD and EUR perspectives—including what your investment is worth after converting it back into your home currency.</p>
+        <p class="landing-subtitle">Compare Indian and US equities from INR, USD and EUR perspectives, including what your investment is worth after converting it back into your home currency.</p>
         </header>''')
         if st.button('Run Analysis',type='primary',key='landing_run_analysis'):
             st.session_state.analysis_ready=True
