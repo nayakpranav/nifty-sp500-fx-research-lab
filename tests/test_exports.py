@@ -30,7 +30,7 @@ def test_standalone_report_state_tabs_and_safe_metadata(lab,lens):
     text=report.decode()
     soup=BeautifulSoup(text,'html.parser')
     assert [x.text for x in soup.select('[role=tab]')]==list(TABS)
-    assert len(soup.select('[role=tabpanel]'))==10
+    assert len(soup.select('[role=tabpanel]'))==len(TABS)
     state=json.loads(soup.select_one('#analysis-state').text)
     assert state['investor_lens']==lens and state['rolling_horizon_years']==5
     assert state['include_ytd'] is False and state['selected_start']=='2001-01-01'

@@ -57,13 +57,23 @@ All pair-dependent statistics and bootstrap paths use the same selected currency
 
 ## Immediately available exports
 
-After each selected analysis state, cached downloads are ready automatically:
+Opening Export automatically builds and caches downloads for the selected state. Run Analysis and normal tab navigation do not render the PDF or prepare export archives.
 
-1. **Full Interactive HTML Dashboard**: one offline file, with Plotly embedded once, keyboard-accessible local tabs, interactive figures, interpretation, tables, glossary, provenance, methodology and selected dates/lens/horizon/YTD/display metadata. Filename: `YYYY-MM-DD_NIFTY_SP500_FX_Research_Lab.html`.
-2. **Complete Excel Workbook**: analytical tables including primitive/derived daily and monthly levels, source-date audit, EUR attribution and inference if run.
-3. CSV bundle ZIP, Annual Returns CSV and individual interactive figure HTML ZIP.
+1. **Quantitative Research Report (PDF)**: a print-friendly academic report with selectable text, six scientific figures, risk tables, shared findings, conditional conclusions, limitations and reproducibility metadata. ReportLab and matplotlib Agg run server-side without Chrome. Fonts are supplied by matplotlib.
+2. **Research Interpretation Report (HTML)**: the same evidence, conclusion, figures and provenance in one self-contained dark research brief, including expandable crossover details.
+3. **Full Interactive HTML Dashboard**: one offline file, with Plotly embedded once, eleven keyboard-accessible local tabs including Research Synthesis, interactive figures, interpretation, tables, glossary, provenance, methodology and selected dates/lens/horizon/YTD/display metadata. Filename: `YYYY-MM-DD_NIFTY_SP500_FX_Research_Lab.html`.
+4. **Complete Excel Workbook**: analytical tables including primitive/derived daily and monthly levels, source-date audit, EUR attribution and inference if run.
+5. CSV bundle ZIP, Annual Returns CSV and individual interactive figure HTML ZIP.
 
 No preparation button is needed. The offline file requires no Streamlit server, websocket, CDN or API connection. Bootstrap is on demand; only results matching the current data, sample, horizon and lens enter exports. If it has not been run, the report states that clearly rather than inventing intervals. Technical CSV/XLSX exports retain compact series keys; human-facing tables and legends use centralized readable labels. Numeric return columns in the offline data tables use decimal fractions (`0.10 = 10%`).
+
+### Shared synthesis and descriptive crossovers
+
+`research_synthesis.py` extends the deterministic interpretation layer. Its structured evidence includes statistic identifiers, units, actual dates, counts, investor lens, uncertainty status and explanatory text. Streamlit, interactive HTML, research HTML and PDF consume those same findings. It reconciles endpoint versus rolling-majority leadership, mean versus median paired excess, winning frequency versus average magnitude, short versus long horizons and native versus home-currency rankings. Capital changes wealth while leaving CAGR unchanged.
+
+Crossovers bracket observed monthly endpoint sign changes in paired S&P-minus-NIFTY CAGR. Actual matched investment starts remain separate from endpoints. The persistence convention is **six consecutive monthly endpoints** with the same leader, using the existing `1e-12` tie tolerance. Ties interrupt sustained runs but can bridge a bracketed sign change. Invalid observations and missing months reset comparisons; no crossing date is interpolated. Before/after fractions count all valid windows on each side, including ties. These are descriptive historical splits, not tests of economic regime changes. Counts, latest leaders and sustained sequences are shown for all seven standard horizons.
+
+Optional inference is bound to a fingerprint of the selected daily panel, exact dates, lens and horizon. Changing the data or analytical selection discards stale intervals. Presentation changes to starting capital or YTD do not change the underlying returns being bootstrapped. Reports record raw provider coverage, the past observations actually used at the selected endpoint, the bounded valuation cutoff, source checksums, validation notes and generation time.
 
 ## Methodological boundaries
 
@@ -81,7 +91,7 @@ python -m pytest -q
 streamlit run streamlit_app.py
 ```
 
-CI runs quantitative regression, source-direction, report and Streamlit AppTest tests. Test fixtures are explicitly synthetic and never a production fallback. Browser acceptance additionally checks the real-data dashboard and standalone HTML at desktop and laptop widths.
+CI runs quantitative regression, source-direction, synthetic conflicting-evidence/crossover cases, PDF text and pagination, offline parity and Streamlit AppTest tests. Test fixtures are explicitly synthetic and never a production fallback. Browser acceptance additionally checks the real-data dashboard at desktop and mobile widths; PDF pages are rendered and visually inspected.
 
 ## Streamlit Community Cloud
 
@@ -89,4 +99,4 @@ Repository: `nayakpranav/nifty-sp500-fx-research-lab`; branch: `main`; entry poi
 
 ## Module boundaries
 
-The original source/alignment/metrics/rolling/statistics/service modules remain. `lenses.py`, `labels.py`, `theme.py`, `glossary.py`, `interpretation.py` and `presentation.py` centralize shared semantics. `fred.py` verifies EUR metadata; `html_report.py` and `assets/report.html` generate the offline snapshot. Streamlit handles controls and rendering rather than duplicating research or narrative logic.
+The original source/alignment/metrics/rolling/statistics/service modules remain. `lenses.py`, `labels.py`, `theme.py`, `glossary.py`, `interpretation.py` and `presentation.py` centralize shared semantics. `research_synthesis.py` supplies shared evidence and `research_report.py` renders academic PDF/HTML. `fred.py` verifies EUR metadata; `html_report.py` and `assets/report.html` generate the full interactive snapshot. Streamlit handles controls and rendering rather than duplicating research or narrative logic.

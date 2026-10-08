@@ -1,6 +1,6 @@
 """Compact financial vocabulary and explanations used in both interfaces."""
 TABS = ("Overview", "Wealth", "Annual Returns", "Rolling Returns", "Outperformance", "Currency",
-        "Risk & Drawdowns", "Robustness", "Methodology", "Export")
+        "Risk & Drawdowns", "Robustness", "Research Synthesis", "Methodology", "Export")
 EXPLANATIONS = {
     "Overview": "Compare reinvested-dividend equity returns on identical dates. Headline cards show native and INR results; the Investor Lens measures both investments in your chosen home currency.",
     "Wealth": "Each line starts from the same amount on the same date. Currency-adjusted lines show final wealth translated back into your home currency. A log scale gives equal space to equal proportional changes.",
@@ -10,6 +10,7 @@ EXPLANATIONS = {
     "Currency": "A foreign investment combines local equity growth and exchange-rate movement. Log contributions add exactly; a difference between two CAGRs is only an arithmetic gap. Positive FX contribution is a tailwind, negative is a drag.",
     "Risk & Drawdowns": "Drawdown measures the fall from an earlier peak. Volatility measures monthly variability, annualized; correlation measures co-movement. Currency translation can change all three for a foreign investor.",
     "Robustness": "Overlapping long-term windows share most of their observations. Disjoint windows reduce overlap; a paired moving-block bootstrap resamples contiguous blocks while preserving within-block market and FX dependence. Stationarity and limited history still constrain inference.",
+    "Research Synthesis": "Connect terminal wealth, holding-period consistency, currency translation, risk and uncertainty into one conditional historical argument. Different measures can support different leaders without being contradictory.",
     "Methodology": "Official total-return identities and FX units are verified before use. Market calendars are aligned backward within seven days, never with future data. Cutoffs are asynchronous valuations, not simultaneous tradable prices.",
     "Export": "Offline HTML contains interactive figures, tables, interpretation and methodology for this selected state. Excel contains complete analytical tables; CSV bundles and individual figure HTML files provide reusable research data.",
 }

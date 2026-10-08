@@ -13,6 +13,9 @@ DISPLAY_LABELS = {
     "Equity_log": "Native equity log return", "Currency_log": "Home-currency FX log contribution",
     "Total_log": "Home-currency total log return", "FX_annual_log": "Annualized FX log contribution",
     "Equity_annual_log": "Annualized native equity log return", "Total_annual_log": "Annualized home-currency log return",
+    "Mean_excess_CAGR": "Mean paired excess CAGR", "Median_excess_CAGR": "Median paired excess CAGR",
+    "Probability_SP_wins": "Historical S&P win fraction",
+    "Terminal_H_CAGR_difference": "Latest selected-horizon excess CAGR",
 }
 
 
