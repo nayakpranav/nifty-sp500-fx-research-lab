@@ -59,8 +59,8 @@ All pair-dependent statistics and bootstrap paths use the same selected currency
 
 After each selected analysis state, cached downloads are ready automatically:
 
-1. **Full Interactive HTML Dashboard** — one offline file, with Plotly embedded once, keyboard-accessible local tabs, interactive figures, interpretation, tables, glossary, provenance, methodology and selected dates/lens/horizon/YTD/display metadata. Filename: `YYYY-MM-DD_NIFTY_SP500_FX_Research_Lab.html`.
-2. **Complete Excel Workbook** — analytical tables including primitive/derived daily and monthly levels, source-date audit, EUR attribution and inference if run.
+1. **Full Interactive HTML Dashboard**: one offline file, with Plotly embedded once, keyboard-accessible local tabs, interactive figures, interpretation, tables, glossary, provenance, methodology and selected dates/lens/horizon/YTD/display metadata. Filename: `YYYY-MM-DD_NIFTY_SP500_FX_Research_Lab.html`.
+2. **Complete Excel Workbook**: analytical tables including primitive/derived daily and monthly levels, source-date audit, EUR attribution and inference if run.
 3. CSV bundle ZIP, Annual Returns CSV and individual interactive figure HTML ZIP.
 
 No preparation button is needed. The offline file requires no Streamlit server, websocket, CDN or API connection. Bootstrap is on demand; only results matching the current data, sample, horizon and lens enter exports. If it has not been run, the report states that clearly rather than inventing intervals. Technical CSV/XLSX exports retain compact series keys; human-facing tables and legends use centralized readable labels. Numeric return columns in the offline data tables use decimal fractions (`0.10 = 10%`).
