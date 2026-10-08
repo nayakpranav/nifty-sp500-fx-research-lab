@@ -101,46 +101,104 @@ def official_tri(start="1999-06-30", end=None):
     return series, metadata
 
 
-def yahoo_sp():
-    """Fetch verified S&P 500 Total Return history from Yahoo Finance."""
-    import yfinance as yf
-    ticker = "^SP500TR"
-    obj = yf.Ticker(ticker)
-    info = obj.get_info()
-    label = str(info.get("longName") or info.get("shortName") or "")
-    identity = "S&P 500" in label.upper() and (
+# Verified against Yahoo's public ^SP500TR total-return listing, 8 October 2026.
+# A dated index level is a second independent check if the volatile
+# yfinance quote-summary metadata endpoint omits name/currency fields.
+SP500TR_ANCHOR_DATE = pd.Timestamp("2026-10-02")
+SP500TR_ANCHOR_CLOSE = 17321.99
+SP500TR_ANCHOR_RELATIVE_TOLERANCE = 0.005
+SP500TR_IDENTITY_URL = "https://finance.yahoo.com/quote/%5ESP500TR/history/"
+
+
+def _sp500tr_identity(obj, series):
+    """Validate native total-return identity without requiring quote-summary uptime.
+
+    Yahoo's public symbol listing attests that ^SP500TR is S&P 500 (TR), USD.
+    Prefer direct quote-summary metadata when available. If it is missing,
+    require the *same* provider history to contain the independently published
+    2026-10-02 total-return index level, and disclose the evidence downgrade.
+    Explicitly contradictory provider metadata always fails closed.
+    """
+    try:
+        info = obj.get_info() or {}
+    except Exception:
+        info = {}
+    if not isinstance(info, dict):
+        info = {}
+    label = str(info.get("longName") or info.get("shortName") or "").strip()
+    currency = info.get("currency")
+    valid_label = "S&P 500" in label.upper() and (
         "(TR)" in label.upper() or "TOTAL RETURN" in label.upper()
     )
-    identity &= info.get("currency") == "USD"
-    if not identity:
+
+    # Never reinterpret a named price index or a different currency as total return.
+    if label and not valid_label:
         raise DataError(
-            f"{ticker}: provider identity/currency verification failed: {label!r}, "
-            f"{info.get('currency')!r}."
+            f"^SP500TR provider returned conflicting instrument name {label!r}; "
+            "the application will not substitute a price index."
         )
+    if currency not in (None, "", "USD"):
+        raise DataError(
+            f"^SP500TR provider returned conflicting currency {currency!r}; "
+            "expected USD."
+        )
+    if valid_label and currency == "USD":
+        return label, "provider_metadata", False
+
+    actual = series.get(SP500TR_ANCHOR_DATE, None)
+    if actual is None or not np.isfinite(actual) or not np.isclose(
+        float(actual), SP500TR_ANCHOR_CLOSE,
+        rtol=SP500TR_ANCHOR_RELATIVE_TOLERANCE, atol=0.0
+    ):
+        raise DataError(
+            "^SP500TR live quote-summary name/currency metadata is unavailable, "
+            "and its historical levels do not match the independently verified "
+            "Yahoo S&P 500 (TR), USD reference on 2026-10-02. "
+            "No price-only benchmark will be substituted."
+        )
+    return "S&P 500 (TR)", "verified_provider_anchor", True
+
+
+def yahoo_sp():
+    """Retrieve S&P 500 Total Return history, rejecting price-only substitutes."""
+    import yfinance as yf
+    ticker = "^SP500TR"  # Only the total-return index; never ^GSPC.
+    obj = yf.Ticker(ticker)
+
+    # Read actual historical observations first. Quote-summary get_info() may
+    # be empty/blocked on Streamlit Cloud even while the chart data is valid.
     history = obj.history(
         period="max", interval="1d", auto_adjust=False, back_adjust=False,
         repair=False, actions=False, keepna=True, raise_errors=True,
     )
     if history.empty or "Close" not in history:
-        raise DataError("^SP500TR returned empty data or no Close field.")
+        raise DataError("^SP500TR returned empty historical data or no Close field.")
+    expected_price_fields = {"Open", "High", "Low", "Close"}
+    if not expected_price_fields.issubset(history.columns):
+        raise DataError("^SP500TR returned an unexpected historical OHLC schema.")
     absent = history[["Open", "High", "Low", "Close"]].isna().all(axis=1)
     series = history.loc[~absent, "Close"].copy()
     series.index = series.index.tz_localize(None).normalize()
     series.name = SP
+
+    label, evidence, anchor_checked = _sp500tr_identity(obj, series)
     metadata = dict(
         ticker=ticker,
         index_name=label,
         source="Yahoo Finance / yfinance",
-        source_url=f"https://finance.yahoo.com/quote/{ticker}/history/",
+        source_url=SP500TR_IDENTITY_URL,
+        identity_reference=SP500TR_IDENTITY_URL,
+        identity_evidence=evidence,
+        anchor_checked=anchor_checked,
+        anchor_date="2026-10-02" if anchor_checked else None,
+        anchor_reference_close=SP500TR_ANCHOR_CLOSE if anchor_checked else None,
         currency="USD",
-        identity_evidence="provider_metadata",
         retrieval_timestamp=timestamp(),
         return_type="total_return",
         missing_source_observations=int(absent.sum()),
     )
     require_valid(validate_series(series, metadata))
     return series, metadata
-
 
 def fred_fx():
     """Fetch Federal Reserve/FRED DEXINUS, quoted as INR per USD."""
