@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08: Research synthesis and academic reports
+
+- Added shared structured findings and an eleventh Research Synthesis tab, reconciling terminal wealth, rolling majority, mean/median excess, horizons, FX and risk.
+- Added descriptive monthly crossover brackets, actual investment starts, six-month sustained sequences, reversal counts and before/after win fractions for every standard horizon. Missing months and values reset comparisons; no statistical break is claimed.
+- Added automatically generated, cached academic PDF and standalone research HTML downloads. Both contain scientific figures, risk tables, selected-state conclusions, source-date distinctions, warnings and reproducibility metadata.
+- Extended the full interactive HTML dashboard with the same synthesis and detailed crossover tables. Retained Excel, CSV and figure exports.
+- Made export rendering lazy so Run Analysis does not build PDF files or archives. Bound optional bootstrap inference to the exact analytical data, dates, horizon and investor lens without altering resampling mathematics.
+- Added synthetic disagreement, gap/tie/persistence, three-lens, report text/pagination, inference-state and export regression coverage. Preserved the landing page, Yahoo metadata compatibility repair, source validation, canonical sample and quantitative engine.
+
 ## 2026-10-07: Investor journey and final polish
 
 - Added home-currency journey cards with actual entry/exit FX amounts, selected starting capital, native/home returns, exact FX contributions, wealth differences and winner for INR/USD/EUR.

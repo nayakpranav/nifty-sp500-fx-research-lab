@@ -17,6 +17,7 @@ from .interpretation import build_tab_interpretations
 from .investor_journey import lens_definition
 from .presentation import hero_html, primary_kpis_html, lens_kpis_html, interpretation_html, info_html, investor_journey_html
 from .reporting import tables_for_export
+from .research_synthesis import build_research_findings
 from .theme import css
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
@@ -43,11 +44,15 @@ METHODOLOGY = """The canonical fair comparison begins exactly 30 June 1999; a se
 
 
 def build_html_report(result, lab, figures, *, horizon=10, perspective="INR-based investor", capital=100,
-                      log=True, include_ytd=True, selected_start=None, selected_end=None, bootstrap=None, bootstrap_meta=None):
+                      log=True, include_ytd=None, selected_start=None, selected_end=None, bootstrap=None, bootstrap_meta=None):
     lens = canonical_lens(perspective)
     if result["perspective"] != lens:
         raise ValueError("HTML lens must match its analytical snapshot.")
     daily = result["daily"]
+    include_ytd = result['include_ytd'] if include_ytd is None else include_ytd
+    findings=build_research_findings(result,horizon,lens,capital,include_ytd,bootstrap,bootstrap_meta,
+        lab,selected_start,selected_end)
+    bootstrap=findings.bootstrap
     metadata = dict(investor_lens=lens, selected_start=str(selected_start or daily.index[0].date()),
         selected_end=str(selected_end or daily.index[-1].date()), actual_start=str(daily.index[0].date()),
         actual_end=str(daily.index[-1].date()), rolling_horizon_years=horizon, include_ytd=include_ytd,
@@ -66,7 +71,7 @@ def build_html_report(result, lab, figures, *, horizon=10, perspective="INR-base
             f'<script type="application/json" id="spec-{element_id}">{spec}</script>' +
             ('<p class="matrix-hint">On narrow screens, scroll the matrix horizontally to inspect every column.</p>' if dense else ''))
 
-    narratives = build_tab_interpretations(result,horizon,lens,capital,include_ytd,bootstrap)
+    narratives = build_tab_interpretations(result,horizon,lens,capital,include_ytd,bootstrap,research_findings=findings)
     def explain(name):
         return interpretation_html(narratives[name])
     a, b = lens_pair(lens)
@@ -91,6 +96,12 @@ def build_html_report(result, lab, figures, *, horizon=10, perspective="INR-base
             sections['Robustness'] += info_html(bootstrap_meta['warning'])
     else:
         sections["Robustness"] += info_html("Bootstrap has not been run for this selected sample, horizon and lens. No confidence intervals are invented; run the robustness calculation in the app to include it in a new snapshot.")
+    sections['Research Synthesis'] += explain('Research Synthesis') + table_html(pd.DataFrame(findings.horizons),'All standard horizons (rates in decimal fractions)')
+    for h,detail in findings.crossovers.items():
+        if detail['events'] or detail['sustained']:
+            sections['Research Synthesis'] += '<details><summary>'+str(h)+'Y observed crossovers and sustained sequences</summary>'
+            sections['Research Synthesis'] += table_html(pd.DataFrame(detail['events']),'Observed endpoint brackets and actual investment starts')
+            sections['Research Synthesis'] += table_html(pd.DataFrame(detail['sustained']),'Sustained leadership, six consecutive monthly endpoints')+'</details>'
     sections["Methodology"] += explain('Methodology') + info_html(METHODOLOGY) + table_html(source_status(lab),"Source provenance") + table_html(lab.validation,"Validation checks")
     sections["Methodology"] += table_html(pd.DataFrame([lab.identity_errors]), "Maximum numerical identity errors")
     glossary = '<details><summary>Research glossary · all terms</summary><dl>' + ''.join(f'<dt>{escape(k)}</dt><dd>{escape(v)}</dd>' for k,v in GLOSSARY.items()) + '</dl></details>'

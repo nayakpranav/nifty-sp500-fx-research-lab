@@ -29,6 +29,7 @@ p,label,[data-testid="stCaptionContainer"] {color:var(--muted);}
 .section-kicker {font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:1rem;}
 .section-note {border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:.8rem 1rem;background:var(--panel);color:var(--muted);font-size:.9rem;margin:.7rem 0 1.2rem;}
 .interpretation-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;margin:.8rem 0 1rem;}
+.interpretation-grid > .interpretation-card:only-child {grid-column:1/-1;}
 .interpretation-card {border:1px solid var(--border);border-radius:16px;padding:1.15rem;background:var(--panel);min-width:0;}
 .interpretation-card h3 {font-size:.95rem;color:var(--muted);margin:0 0 .5rem;}
 .interpretation-card p {font-size:.92rem;line-height:1.65;margin:.35rem 0;}

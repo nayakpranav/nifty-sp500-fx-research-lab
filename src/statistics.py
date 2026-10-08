@@ -149,6 +149,9 @@ def block_bootstrap(
             else ""
         ),
     )
+    # Provenance only: inference mathematics above remains unchanged.
+    from .research_synthesis import analysis_fingerprint
+    metadata['analysis_fingerprint'] = analysis_fingerprint({'daily':levels},horizon,perspective)
     return pd.DataFrame(rows), pd.DataFrame(simulated, columns=names), metadata
 
 

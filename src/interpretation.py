@@ -112,8 +112,14 @@ def outperformance_interpretation(result, horizon, perspective):
     return InterpretationCard(f'{horizon}Y historical outperformance', f'{int(row.Windows):,} windows · S&P wins {row.SP_wins:.1%}', text, limited)
 
 
-def build_tab_interpretations(result, horizon=10, perspective='INR-based investor', capital=100, include_ytd=True, bootstrap=None):
+def build_tab_interpretations(result, horizon=10, perspective='INR-based investor', capital=100, include_ytd=None, bootstrap=None,
+                             *, bootstrap_meta=None, research_findings=None):
     """One numerical narrative system for the app and the offline snapshot."""
+    from .research_synthesis import build_research_findings
+    include_ytd = result['include_ytd'] if include_ytd is None else include_ytd
+    findings = research_findings or build_research_findings(result,horizon,perspective,capital,include_ytd,
+        bootstrap,bootstrap_meta)
+    bootstrap = findings.bootstrap
     from .investor_journey import investor_journey
     journey = investor_journey(result, perspective, capital)
     home, symbol = journey['home'], currency_symbol(perspective)
@@ -169,11 +175,7 @@ def build_tab_interpretations(result, horizon=10, perspective='INR-based investo
         f'This selection contains {len(holding):,} eligible cells. Positive values mean S&P outperformed; negative values mean NIFTY outperformed. '
         'Blank cells lack a complete holding period. The cells overlap and do not provide independent evidence.')]
     endpoints=result['endpoints']
-    changes=[]
-    if len(endpoints):
-        for _,group in endpoints.groupby('Start_year'):
-            changes.extend(group.sort_values('End_date').Difference.diff().abs().dropna().tolist())
-    swing=max(changes,default=0.)
+    swing=findings.values['endpoint_max_adjacent_change']
     sensitive=swing >= .02
     cards['endpoints']=[InterpretationCard('Endpoint sensitivity',f'{swing*100:.2f} pp maximum adjacent-endpoint change',
         f'This matrix shows how conclusions change when the ending year changes, for the same starting year, in {home}. '
@@ -233,4 +235,7 @@ def build_tab_interpretations(result, horizon=10, perspective='INR-based investo
     cards['Export']=[InterpretationCard('What this snapshot contains','Bootstrap inference included' if bootstrap is not None else 'Bootstrap not run for this state',
         state+' The offline HTML contains this investor journey and the same calculated interpretations as the app. '
         +('Matching bootstrap results are included automatically.' if bootstrap is not None else 'Bootstrap results are not fabricated. Run the robustness calculation to include matching inference.'))]
+    for section, extra in findings.additional_cards.items():
+        cards[section].extend(extra)
+    cards['Research Synthesis'] = list(findings.cards)
     return cards

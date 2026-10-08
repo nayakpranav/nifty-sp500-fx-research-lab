@@ -5,7 +5,7 @@ from src.lenses import LENSES
 from src import streamlit_ui as ui
 
 
-def test_landing_run_transition_three_lenses_ten_tabs_and_direct_export(lab,monkeypatch):
+def test_landing_run_transition_three_lenses_all_tabs_and_direct_export(lab,monkeypatch):
     monkeypatch.setattr(ui,'_lab',lambda *args:lab)
     at=AppTest.from_file(str(Path(__file__).resolve().parents[1]/'streamlit_app.py'),default_timeout=180).run()
     assert not at.exception
@@ -33,6 +33,8 @@ def test_landing_run_transition_three_lenses_ten_tabs_and_direct_export(lab,monk
             at.run()
             assert not at.exception, (lens,tab,[e.message for e in at.exception])
         assert any(d.label=='Download Full Interactive HTML Dashboard' for d in at.get('download_button'))
+        assert any(d.label=='Download Quantitative Research Report (PDF)' for d in at.get('download_button'))
+        assert any(d.label=='Download Research Interpretation Report (HTML)' for d in at.get('download_button'))
         assert 'Bootstrap not run for this state' in ''.join(x.value for x in at.markdown)
         assert all('Prepare' not in b.label for b in at.button)
     # A changed date range must not export obsolete bootstrap results.

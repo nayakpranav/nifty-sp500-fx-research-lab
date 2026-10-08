@@ -16,6 +16,8 @@ from .labels import display_label, display_table
 from .lenses import LENSES, lens_pair, home_currency
 from .presentation import hero_html, primary_kpis_html, lens_kpis_html, interpretation_html, info_html, investor_journey_html
 from .rolling import excess_summary
+from .research_synthesis import build_research_findings
+from .research_report import build_research_pdf, build_research_html
 from .theme import css
 from .visualizations import figure_set
 
@@ -36,6 +38,14 @@ def _exports(result, source_revision, horizon, perspective, capital, log_scale,
         bootstrap=bootstrap,bootstrap_meta=bootstrap_meta),
         excel=excel_bytes(result,_research_lab,bootstrap), csv=csv_bundle_bytes(result,_research_lab,bootstrap),
         annual=dataframe_csv_bytes(result['annual']), figures=figure_bundle_bytes(figures))
+
+
+@st.cache_data(ttl='6h', max_entries=3, show_spinner=False)
+def _research_exports(result, source_revision, horizon, perspective, capital, include_ytd,
+                      start, end, _research_lab, bootstrap=None, bootstrap_meta=None):
+    findings=build_research_findings(result,horizon,perspective,capital,include_ytd,bootstrap,
+        bootstrap_meta,_research_lab,start,end)
+    return dict(pdf=build_research_pdf(result,findings),research_html=build_research_html(result,findings))
 
 
 def _markup(value):
@@ -171,18 +181,25 @@ def run_app():
     cached = st.session_state.get('bootstrap_result')
     valid_bootstrap = cached if cached and cached['key']==sample_key else None
     revision = hashlib.sha256((json.dumps(lab.metadata,sort_keys=True,default=str)+css()).encode()).hexdigest()
-    with st.spinner('Building the offline research snapshot and ready-to-download exports…'):
-        downloads = _exports(result,revision,horizon,perspective,capital,log_scale,include_ytd,start,end,lab,
-            valid_bootstrap['ci'] if valid_bootstrap else None,valid_bootstrap['meta'] if valid_bootstrap else None)
-    st.sidebar.caption('Exports ready · HTML / Excel / CSV')
+    st.sidebar.caption('Reports and exports are generated automatically when you open Export.')
     tabs = st.tabs(list(TABS),key='research_tabs',on_change='rerun')
     active = next((i for i,t in enumerate(tabs) if t.open),0)
     name = TABS[active]
     pair = list(lens_pair(perspective))
+    findings=build_research_findings(result,horizon,perspective,capital,include_ytd,
+        valid_bootstrap['ci'] if valid_bootstrap else None,valid_bootstrap['meta'] if valid_bootstrap else None,
+        lab,start,end)
     interpretations=build_tab_interpretations(result,horizon,perspective,capital,include_ytd,
-        valid_bootstrap['ci'] if valid_bootstrap else None)
+        findings.bootstrap,research_findings=findings)
     def explain(section):
-        _markup(interpretation_html(interpretations[section]))
+        cards=interpretations[section]
+        if section in ('Rolling Returns','Currency','drawdowns','Methodology') and len(cards)>1:
+            _markup(interpretation_html(cards[:1]))
+            for card in cards[1:]:
+                with st.expander(card.title):
+                    _markup(interpretation_html([card]))
+        else:
+            _markup(interpretation_html(cards))
     def figs(names):
         return figure_set(result,lab,horizon=horizon,perspective=perspective,capital=capital,log=log_scale,only=names)
     with tabs[active]:
@@ -218,6 +235,10 @@ def run_app():
                 _plot(f[key],key)
             summary=result['rolling_summaries'][horizon].loc[pair]
             _table(summary,[x for x in summary.columns if x!='Windows'])
+            with st.expander('Observed crossover dates and sustained leadership'):
+                st.caption('Each date is a rolling endpoint, paired with its actual investment start. Before/after fractions use all valid windows on each side. These are descriptive splits, not statistical breaks. Fractions in this table use decimals (0.10 = 10%).')
+                _table(pd.DataFrame(findings.crossovers[horizon]['events']))
+                _table(pd.DataFrame(findings.crossovers[horizon]['sustained']))
         elif active==4:
             for key,fig in figs(['probability','holding_matrix','endpoints']).items():
                 _plot(fig,key)
@@ -267,6 +288,21 @@ def run_app():
             else:
                 st.caption('Run the bootstrap to include its intervals in this selected-state HTML, Excel and CSV snapshot.')
         elif active==8:
+            # Keep the integrated conclusion prominent; detail is expandable.
+            _markup(interpretation_html([findings.cards[-1]]))
+            explain_cards=list(findings.cards[:-1])
+            for card in explain_cards:
+                with st.expander(card.title,expanded=card.title in ('Selected-sample outcome','Holding-period evidence')):
+                    _markup(interpretation_html([card]))
+            with st.expander('All horizons: leadership, overlap and crossovers'):
+                table=pd.DataFrame(findings.horizons).set_index('Horizon')
+                _table(table,['SP_wins','NIFTY_wins','Ties','Mean_advantage','Median_advantage','Sample_fraction','Nonoverlap_SP_wins'],height=400)
+                for h,detail in findings.crossovers.items():
+                    if detail['events'] or detail['sustained']:
+                        st.markdown(f'#### {h}Y observed evidence')
+                        _table(pd.DataFrame(detail['events']))
+                        _table(pd.DataFrame(detail['sustained']))
+        elif active==9:
             explain('Methodology')
             _markup(info_html(METHODOLOGY))
             st.markdown('### Data provenance')
@@ -276,11 +312,18 @@ def run_app():
             error=max(abs(float(v)) for v in lab.identity_errors.values())
             st.success(f'Currency identities pass · maximum numerical error {error:.3g}')
             _glossary()
-        elif active==9:
+        elif active==10:
+            with st.spinner('Generating the selected-state PDF, research HTML and reusable exports…'):
+                downloads = _exports(result,revision,horizon,perspective,capital,log_scale,include_ytd,start,end,lab,
+                    findings.bootstrap,valid_bootstrap['meta'] if valid_bootstrap else None)
+                downloads.update(_research_exports(result,revision,horizon,perspective,capital,include_ytd,start,end,lab,
+                    findings.bootstrap,valid_bootstrap['meta'] if valid_bootstrap else None))
             explain('Export')
             st.markdown('### Download this research snapshot')
             st.caption(f'{perspective} · {result["daily"].index[0]:%d %b %Y} → {result["daily"].index[-1]:%d %b %Y} · {horizon}Y rolling horizon · YTD {"included" if include_ytd else "excluded"}')
-            st.download_button('Download Full Interactive HTML Dashboard',downloads['html'],report_filename(),'text/html',type='primary',width='stretch')
+            st.download_button('Download Quantitative Research Report (PDF)',downloads['pdf'],'NIFTY_SP500_FX_Quantitative_Research.pdf','application/pdf',type='primary',width='stretch')
+            st.download_button('Download Research Interpretation Report (HTML)',downloads['research_html'],'NIFTY_SP500_FX_Research_Interpretation.html','text/html',width='stretch')
+            st.download_button('Download Full Interactive HTML Dashboard',downloads['html'],report_filename(),'text/html',width='stretch')
             st.download_button('Complete Excel Workbook',downloads['excel'],'NIFTY_SP500_FX_Research.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',width='stretch')
             st.markdown('#### Data and individual figures')
             st.download_button('CSV bundle ZIP',downloads['csv'],'NIFTY_SP500_FX_Tables.zip','application/zip')
