@@ -66,7 +66,7 @@ def _table(frame, percent_cols=(), height=360):
 def _glossary(terms=None):
     with st.expander('Research glossary' if terms is None else 'Help with terms in this view'):
         for term in terms or GLOSSARY:
-            st.markdown(f'**{term}** — {GLOSSARY[term]}')
+            st.markdown(f'**{term}:** {GLOSSARY[term]}')
 
 
 def _explanation(name, perspective):
