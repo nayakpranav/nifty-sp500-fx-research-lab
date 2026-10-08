@@ -61,7 +61,10 @@ def _charts(result, findings):
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
         handles,_=ax.get_legend_handles_labels()
         if handles:
-            ax.legend(loc='best',fontsize=8,frameon=False)
+            if key == 'fx':
+                ax.legend(loc='upper left',bbox_to_anchor=(1.01,1),fontsize=8,frameon=False)
+            else:
+                ax.legend(loc='best',fontsize=8,frameon=False)
         buf=BytesIO()
         fig.savefig(buf,format='png',dpi=180)
         output.append(dict(key=key, image=buf.getvalue(), caption=f'Figure {len(output)+1}. {caption}'))
