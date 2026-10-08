@@ -96,17 +96,35 @@ def _controls(lab):
 
 
 def _landing():
-    _markup(hero_html())
-    _markup('''<div class="landing-grid"><section class="landing-card"><div class="hero-kicker">01 · Start your research</div>
-    <h2>One common start. Three investor lenses.</h2><p>Run Analysis to retrieve and validate the latest total-return and exchange-rate histories.
-    Explore long-run wealth, rolling holding periods, currency effects and risk in INR, USD or EUR.</p>
-    <div class="section-note">30 June 1999 → latest common validated observation.<br>TRI / TR include reinvested dividends.</div>
-    <p>Download a complete interactive dashboard to revisit the research offline.</p></section>
-    <section class="landing-card"><div class="hero-kicker">02 · Verified live sources</div><h2>Equity growth + currency movement</h2>
-    <div class="source-line">NIFTY 50 Total Return Index · NSE Indices</div><div class="source-line">S&amp;P 500 Total Return · Yahoo ^SP500TR</div>
-    <div class="source-line">USD/INR · FRED DEXINUS · INR per USD</div><div class="source-line">EUR/USD · FRED DEXUSEU · USD per EUR</div>
-    <p>Market calendars are aligned using recent past observations. Each source's units and identity are checked before calculations.</p></section></div>''')
-    _markup(info_html('Historical market research. Taxes, fees, tracking error and remittance costs are excluded.'))
+    # Semantic heading roles avoid automatic anchor links; raw HTML preserves SVG icons.
+    # These assets are pre-analysis only; export/shared styles are unchanged.
+    st.html(ROOT / 'assets' / 'landing.css')
+    with st.container(key='landing_hero'):
+        st.html('''<header class="landing-hero-copy">
+        <div class="landing-eyebrow">Quantitative market research · INR / USD / EUR</div>
+        <h1>NIFTY 50 × S&amp;P 500 × FX<span>Research Lab</span></h1>
+        <p class="landing-thesis">The return you see is not always the return you get.</p>
+        <p class="landing-subtitle">Compare Indian and US equities from INR, USD and EUR perspectives—including what your investment is worth after converting it back into your home currency.</p>
+        </header>''')
+        if st.button('Run Analysis',type='primary',key='landing_run_analysis'):
+            st.session_state.analysis_ready=True
+            st.rerun()
+        st.html('''<div class="landing-hero-note"><span>Reinvested dividends</span><span>Dynamic FX translation</span><span>One common validated sample</span></div>''')
+    _markup((ROOT / 'assets' / 'landing.html').read_text(encoding='utf-8'))
+    with st.container(key='landing_final_cta'):
+        st.html('''<div class="landing-final-copy"><h2>Ready to explore the data?</h2><p>Choose your home currency. Follow the returns. Inspect the evidence.</p></div>''')
+        if st.button('Run Analysis',type='primary',key='landing_final_run_analysis'):
+            st.session_state.analysis_ready=True
+            st.rerun()
+    st.html('''<footer class="landing-footer"><p>Historical market research. Taxes, fees, tracking error and remittance costs are excluded.</p>
+    <!-- Add the secondary ☕ Support this project anchor here once its URL is provided. -->
+    <div class="landing-support-slot"></div></footer>''')
+    with st.expander('Verified live sources & common sample'):
+        st.html('''<section class="landing-card"><h2>Equity growth + currency movement</h2>
+        <div class="source-line">NIFTY 50 Total Return Index · NSE Indices</div><div class="source-line">S&amp;P 500 Total Return · Yahoo ^SP500TR</div>
+        <div class="source-line">USD/INR · FRED DEXINUS · INR per USD</div><div class="source-line">EUR/USD · FRED DEXUSEU · USD per EUR</div>
+        <p>30 June 1999 → latest common validated observation. TRI / TR include reinvested dividends.</p>
+        <p>Market calendars are aligned using recent past observations. Each source's units and identity are checked before calculations.</p></section>''')
     _glossary(CONTEXT_TERMS['Overview'])
 
 
